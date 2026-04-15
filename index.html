@@ -18,6 +18,7 @@
     <main class="layout">
       <section class="panel input-panel">
         <h2>Claim Submission Inputs</h2>
+        <p class="panel-subtitle">Submit claim details and documents. The tool returns neutral analysis for manual review.</p>
         <form id="claim-form" novalidate>
           <label for="partnerName">Partner Name</label>
           <input id="partnerName" name="partnerName" type="text" placeholder="Enter partner name" required />
@@ -38,11 +39,11 @@
             id="documents"
             name="documents"
             type="file"
-            accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+            accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt,.csv,.json"
             multiple
             required
           />
-          <p class="help-text">Accepted: PDF, PNG/JPG, DOC/DOCX, XLS/XLSX</p>
+          <p class="help-text">Accepted: PDF, PNG/JPG, DOC/DOCX, XLS/XLSX (plus text formats for deeper browser extraction)</p>
 
           <button type="submit">Run Analysis</button>
         </form>
@@ -59,6 +60,7 @@
           <article class="result-card" id="doc-summary"></article>
           <article class="result-card" id="extracted-data"></article>
           <article class="result-card" id="matching-analysis"></article>
+          <article class="result-card" id="cross-document-validation"></article>
           <article class="result-card" id="guideline-analysis"></article>
           <article class="result-card ai-card" id="ai-screening"></article>
           <article class="result-card" id="overall-summary"></article>
@@ -66,9 +68,9 @@
       </section>
     </main>
 
-    <template id="severity-template">
-      <span class="severity"></span>
-    </template>
+    <footer class="app-footer">
+      <span>Project by - Govind Amilkanthwar</span>
+    </footer>
 
     <script src="app.js"></script>
   </body>
