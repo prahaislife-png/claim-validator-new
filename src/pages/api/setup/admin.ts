@@ -1,7 +1,3 @@
-/**
- * ONE-TIME SETUP ENDPOINT – Create the first admin user.
- * Only works when zero admin profiles exist.
- */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 
@@ -14,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const adminClient = getAdminClient();
 
-  // Lock once any admin exists
+  // Check if tables exist and if any admin already exists
   const { data: existingAdmin, error: checkErr } = await adminClient
     .from('profiles')
     .select('id')
@@ -23,43 +19,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .maybeSingle();
 
   if (checkErr) {
-    return res.status(500).json({ error: 'Database tables not yet created. Run migration first.' });
+    return res.status(500).json({
+      error: `Database tables not found. Run the SQL migration first. (${checkErr.message})`,
+    });
   }
 
   if (existingAdmin) {
     return res.status(400).json({ error: 'Admin already exists. Use the admin panel to manage users.' });
   }
 
-  // Create auth user
-  const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
+  // Check if user already exists in auth (from a previous failed attempt)
+  const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers();
+  const existingAuthUser = existingUsers?.find(u => u.email === email);
 
-  if (createErr) return res.status(400).json({ error: createErr.message });
+  let userId: string;
 
-  // Insert admin profile
-  const { error: profileErr } = await adminClient.from('profiles').insert({
-    id:        created.user.id,
+  if (existingAuthUser) {
+    // Auth user exists but profile wasn't created — reuse them
+    userId = existingAuthUser.id;
+  } else {
+    // Create auth user
+    const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (createErr) return res.status(400).json({ error: createErr.message });
+    userId = created.user.id;
+  }
+
+  // Insert or upsert admin profile
+  const { error: profileErr } = await adminClient.from('profiles').upsert({
+    id:        userId,
     email,
     role:      'admin',
     is_active: true,
-  });
+  }, { onConflict: 'id' });
 
   if (profileErr) {
-    // Cleanup: delete the auth user so setup can be re-run
-    await adminClient.auth.admin.deleteUser(created.user.id);
-    return res.status(500).json({ error: profileErr.message });
+    return res.status(500).json({
+      error: `Profile creation failed: ${profileErr.message}. The tables may not exist yet.`,
+    });
   }
 
-  // Log it
-  await adminClient.from('activity_logs').insert({
-    user_id:  created.user.id,
-    email,
-    action:   'admin_setup',
-    metadata: { setup: true },
-  });
+  try {
+    await adminClient.from('activity_logs').insert({
+      user_id:  userId,
+      email,
+      action:   'admin_setup',
+      metadata: { setup: true },
+    });
+  } catch { /* non-critical */ }
 
   return res.status(201).json({ ok: true, email });
 }

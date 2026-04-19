@@ -89,7 +89,7 @@ function formatSize(bytes: number) {
 }
 
 export default function Page() {
-  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const { user, profile, loading: authLoading, profileMissing, signOut } = useAuth();
   const router = useRouter();
 
   const [claim, setClaim] = useState<ClaimFormData>(EMPTY_FORM);
@@ -108,7 +108,37 @@ export default function Page() {
     if (!authLoading && !user) router.replace('/login');
   }, [authLoading, user, router]);
 
-  if (authLoading || !user || !profile) return null;
+  // Still resolving session / profile
+  if (authLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+    </div>
+  );
+
+  if (!user) return null; // redirect handled by useEffect
+
+  // Authenticated but no profile row — account not fully set up
+  if (profileMissing) return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="card max-w-sm w-full text-center">
+        <div className="card-body py-10 space-y-4">
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
+          <h2 className="text-lg font-bold text-slate-900">Account not fully set up</h2>
+          <p className="text-sm text-slate-600">
+            Your login was successful but no user profile was found. This usually means the
+            admin setup did not complete. Please contact your administrator or re-run
+            the setup at <a href="/setup" className="text-brand-700 underline">/setup</a>.
+          </p>
+          <button onClick={async () => { await signOut(); router.replace('/login'); }}
+            className="btn-secondary mx-auto">
+            <LogOut className="w-4 h-4" /> Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!profile) return null;
 
   const STEPS = useMemo(() => ([
     'Extracting content from documents',
