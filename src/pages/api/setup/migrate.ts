@@ -54,18 +54,18 @@ alter table public.activity_logs     enable row level security;
 alter table public.claim_submissions enable row level security;
 
 -- Profiles
-create policy if not exists "profiles_self_select"  on public.profiles for select using (auth.uid() = id);
-create policy if not exists "profiles_admin_select" on public.profiles for select using (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
-create policy if not exists "profiles_admin_insert" on public.profiles for insert with check (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
-create policy if not exists "profiles_admin_update" on public.profiles for update using (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+create policy "profiles_self_select"  on public.profiles for select using (auth.uid() = id);
+create policy "profiles_admin_select" on public.profiles for select using (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+create policy "profiles_admin_insert" on public.profiles for insert with check (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+create policy "profiles_admin_update" on public.profiles for update using (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
 
 -- Activity logs
-create policy if not exists "logs_self_select"  on public.activity_logs for select using (auth.uid() = user_id);
-create policy if not exists "logs_admin_select" on public.activity_logs for select using (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+create policy "logs_self_select"  on public.activity_logs for select using (auth.uid() = user_id);
+create policy "logs_admin_select" on public.activity_logs for select using (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
 
 -- Claim submissions
-create policy if not exists "submissions_self_select"  on public.claim_submissions for select using (auth.uid() = user_id);
-create policy if not exists "submissions_admin_select" on public.claim_submissions for select using (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+create policy "submissions_self_select"  on public.claim_submissions for select using (auth.uid() = user_id);
+create policy "submissions_admin_select" on public.claim_submissions for select using (exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
 `;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
