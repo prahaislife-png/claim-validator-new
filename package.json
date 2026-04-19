@@ -1,0 +1,29 @@
+{
+  "name": "claim-validation-tool",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.26.0",
+    "clsx": "2.1.1",
+    "lucide-react": "0.400.0",
+    "mammoth": "1.8.0",
+    "next": "^14.2.33",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "xlsx": "0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.12",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "autoprefixer": "10.4.19",
+    "postcss": "8.4.40",
+    "tailwindcss": "3.4.6",
+    "typescript": "5.5.4"
+  }
+}

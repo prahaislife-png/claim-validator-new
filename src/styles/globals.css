@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-slate-50 text-slate-900 font-sans; }
+}
+
+@layer components {
+  .input-field {
+    @apply w-full h-10 px-3 text-sm border border-slate-300 rounded-lg bg-white placeholder-slate-400
+    focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all duration-150;
+  }
+  .input-field.error {
+    @apply border-red-400 focus:ring-red-500;
+  }
+  .label {
+    @apply block text-xs font-medium text-slate-600 mb-1.5 tracking-wide uppercase;
+  }
+  .card {
+    @apply bg-white rounded-xl border border-slate-200 shadow-sm;
+  }
+  .card-header {
+    @apply px-6 py-4 border-b border-slate-100 flex items-center gap-3;
+  }
+  .card-body {
+    @apply px-6 py-5;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 h-11 px-6 text-sm font-semibold
+    bg-brand-700 text-white rounded-lg hover:bg-brand-800 active:scale-[0.98]
+    disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 shadow-sm;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-medium
+    bg-white text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50
+    disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-success { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-warning { @apply badge bg-amber-50 text-amber-700 border border-amber-200; }
+  .badge-error   { @apply badge bg-red-50 text-red-700 border border-red-200; }
+  .badge-info    { @apply badge bg-blue-50 text-blue-700 border border-blue-200; }
+  .badge-neutral { @apply badge bg-slate-100 text-slate-600 border border-slate-200; }
+  .section-title {
+    @apply text-sm font-semibold text-slate-800 flex items-center gap-2;
+  }
+  .tab-btn {
+    @apply px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150;
+  }
+  .tab-btn.active {
+    @apply bg-brand-700 text-white shadow-sm;
+  }
+  .tab-btn:not(.active) {
+    @apply text-slate-600 hover:text-slate-900 hover:bg-slate-100;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
+
+/* Progress bar animation */
+@keyframes progressFill {
+  from { width: 0%; }
+  to { width: var(--progress-width); }
+}
+.progress-bar { animation: progressFill 1s ease-out forwards; }

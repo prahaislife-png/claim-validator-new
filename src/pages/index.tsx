@@ -1,0 +1,739 @@
+import { useState, useRef, useCallback, useMemo } from 'react';
+import Head from 'next/head';
+import clsx from 'clsx';
+import {
+  Upload, FileText, Image as ImageIcon, File as FileIcon, X, CheckCircle, XCircle,
+  AlertTriangle, ChevronRight, Loader2, Shield, BarChart3, ClipboardList,
+  FileCheck, AlertOctagon, RefreshCw, Info, FileSpreadsheet, Building2,
+  Calendar, Euro, Hash, Tag, Activity as ActivityIcon, Clock, Sparkles,
+  FileSearch, Layers, Plus, ArrowRight,
+} from 'lucide-react';
+import type {
+  ClaimFormData, UploadedDocument, ValidationResult, StatusType, SeverityType, DecisionType,
+} from '@/lib/types';
+
+const CATEGORIES = ['Event', 'Content Syndication', 'Digital Marketing', 'Telemarketing', 'Training', 'Trade Show', 'Other'];
+const ACTIVITY_TYPES = ['Event', 'Digital', 'Content', 'Training', 'Demand Generation', 'Other'];
+const ACTIVITY_MAP: Record<string, string[]> = {
+  Event: ['Physical Events (SAP Led)', 'Physical Events (Partner Led)', 'Virtual Events', 'Webinar', 'Trade Show', 'Co-branded Event'],
+  Digital: ['Email Campaign', 'Social Media', 'Search/PPC', 'Display Advertising', 'Retargeting', 'SEO'],
+  Content: ['Case Study', 'White Paper', 'Blog Post', 'Video Production', 'Infographic', 'Newsletter'],
+  Training: ['Partner Training', 'End Customer Training', 'Workshop', 'Certification'],
+  'Demand Generation': ['Telemarketing', 'Inside Sales Support', 'Lead Generation', 'ABM Campaign'],
+  Other: ['Other'],
+};
+
+const REQUIRED: (keyof ClaimFormData)[] = [
+  'partnerId', 'partnerName', 'budgetPeriodFrom', 'budgetPeriodTo',
+  'budgetAllocationAmount', 'category', 'requestNumber', 'activityType',
+  'activity', 'fundRequestSubmittedDate', 'activityStartDate', 'activityEndDate', 'fundingApproved',
+];
+
+const EMPTY_FORM: ClaimFormData = {
+  partnerId: '', partnerName: '', budgetPeriodFrom: '', budgetPeriodTo: '',
+  budgetAllocationAmount: '', category: '', requestNumber: '', activityType: '',
+  activity: '', fundRequestSubmittedDate: '', fundApprovedDate: '',
+  activityStartDate: '', activityEndDate: '', fundingApproved: '',
+};
+
+const STATUS_STYLES: Record<StatusType, { cls: string; label: string; Icon: React.ComponentType<{ className?: string }> }> = {
+  pass:    { cls: 'text-emerald-700 bg-emerald-50 border-emerald-200',  label: 'Pass',    Icon: CheckCircle },
+  fail:    { cls: 'text-red-700 bg-red-50 border-red-200',              label: 'Fail',    Icon: XCircle },
+  warning: { cls: 'text-amber-700 bg-amber-50 border-amber-200',        label: 'Warning', Icon: AlertTriangle },
+  missing: { cls: 'text-slate-700 bg-slate-100 border-slate-200',       label: 'Missing', Icon: AlertOctagon },
+  partial: { cls: 'text-blue-700 bg-blue-50 border-blue-200',           label: 'Partial', Icon: Info },
+};
+
+const SEVERITY_STYLES: Record<SeverityType, string> = {
+  critical: 'bg-red-100 text-red-800 border-red-200',
+  high:     'bg-orange-100 text-orange-800 border-orange-200',
+  medium:   'bg-amber-100 text-amber-800 border-amber-200',
+  low:      'bg-blue-100 text-blue-800 border-blue-200',
+  info:     'bg-slate-100 text-slate-700 border-slate-200',
+};
+
+const DECISION_STYLES: Record<DecisionType, { bg: string; ring: string; text: string; Icon: React.ComponentType<{ className?: string }>; label: string }> = {
+  APPROVED:     { bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100', ring: 'ring-emerald-300', text: 'text-emerald-900', Icon: CheckCircle,    label: 'Approved' },
+  REJECTED:     { bg: 'bg-gradient-to-br from-red-50 to-red-100',         ring: 'ring-red-300',     text: 'text-red-900',     Icon: XCircle,        label: 'Rejected' },
+  NEEDS_REVIEW: { bg: 'bg-gradient-to-br from-amber-50 to-amber-100',     ring: 'ring-amber-300',   text: 'text-amber-900',   Icon: AlertTriangle,  label: 'Needs Review' },
+};
+
+function getFileIcon(name: string, type: string) {
+  if (type === 'application/pdf' || name.endsWith('.pdf')) return <FileText className="w-5 h-5 text-red-500" />;
+  if (type.startsWith('image/')) return <ImageIcon className="w-5 h-5 text-violet-500" />;
+  if (/\.(xlsx|xls|csv)$/i.test(name)) return <FileSpreadsheet className="w-5 h-5 text-emerald-600" />;
+  if (/\.(docx|doc)$/i.test(name)) return <FileText className="w-5 h-5 text-brand-600" />;
+  return <FileIcon className="w-5 h-5 text-slate-400" />;
+}
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+export default function Page() {
+  const [claim, setClaim] = useState<ClaimFormData>(EMPTY_FORM);
+  const [docs, setDocs] = useState<UploadedDocument[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<ValidationResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [errs, setErrs] = useState<Partial<Record<keyof ClaimFormData, boolean>>>({});
+  const [tab, setTab] = useState<'overview' | 'fields' | 'documents' | 'guidelines' | 'issues'>('overview');
+  const [drag, setDrag] = useState(false);
+  const [step, setStep] = useState(0);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const STEPS = useMemo(() => ([
+    'Extracting content from documents',
+    'Cross-referencing claim fields',
+    'Checking guideline compliance',
+    'Running AI document analysis',
+    'Generating validation report',
+  ]), []);
+
+  const setField = (key: keyof ClaimFormData, value: string) => {
+    setClaim(prev => key === 'activityType' ? { ...prev, activityType: value, activity: '' } : { ...prev, [key]: value });
+    if (errs[key]) setErrs(e => { const n = { ...e }; delete n[key]; return n; });
+  };
+
+  const validate = () => {
+    const next: typeof errs = {};
+    for (const k of REQUIRED) if (!claim[k]?.trim()) next[k] = true;
+    setErrs(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const readFile = (file: File): Promise<UploadedDocument> => new Promise((resolve, reject) => {
+    const isText = file.type.startsWith('text/') || /\.(txt|csv|json|xml|log|md)$/i.test(file.name);
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const result = reader.result as string;
+      const content = isText ? result : (result.split(',')[1] ?? result);
+      resolve({
+        id: Math.random().toString(36).slice(2),
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        content,
+        isText,
+      });
+    };
+    if (isText) reader.readAsText(file); else reader.readAsDataURL(file);
+  });
+
+  const addFiles = useCallback(async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    const added: UploadedDocument[] = [];
+    for (const f of list) {
+      if (docs.some(d => d.name === f.name && d.size === f.size)) continue;
+      if (f.size > 25 * 1024 * 1024) { setError(`${f.name} exceeds 25MB size limit`); continue; }
+      try { added.push(await readFile(f)); } catch { /* skip */ }
+    }
+    setDocs(d => [...d, ...added]);
+  }, [docs]);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setDrag(false);
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  }, [addFiles]);
+
+  const submit = async () => {
+    if (!validate()) { setError('Please fill in all required fields'); return; }
+    if (docs.length === 0) { setError('Please upload at least one supporting document'); return; }
+    setError(null); setResult(null); setBusy(true); setStep(0); setTab('overview');
+
+    const ticker = setInterval(() => setStep(s => (s < STEPS.length - 1 ? s + 1 : s)), 2200);
+    try {
+      const res = await fetch('/api/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claimData: claim, documents: docs }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Validation failed');
+      setResult(data.result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unexpected error');
+    } finally {
+      clearInterval(ticker); setBusy(false);
+    }
+  };
+
+  const reset = () => { setClaim(EMPTY_FORM); setDocs([]); setResult(null); setError(null); setErrs({}); };
+
+  const activities = ACTIVITY_MAP[claim.activityType] ?? [];
+  const stats = result ? {
+    pass: result.fieldValidations.filter(f => f.status === 'pass').length,
+    fail: result.fieldValidations.filter(f => f.status === 'fail' || f.status === 'missing').length,
+    warn: result.fieldValidations.filter(f => f.status === 'warning' || f.status === 'partial').length,
+    total: result.fieldValidations.length,
+    criticalIssues: result.issues.filter(i => i.severity === 'critical' || i.severity === 'high').length,
+  } : null;
+
+  return (
+    <>
+      <Head>
+        <title>Claim Validation Portal</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+
+      <div className="min-h-screen bg-slate-50">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+          <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-700 to-brand-900 flex items-center justify-center shadow-md">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-slate-900 leading-tight">Claim Validation Portal</h1>
+                <p className="text-xs text-slate-500">Partner Marketing Fund (MDF) Analysis</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="badge-info hidden md:inline-flex">
+                <Sparkles className="w-3 h-3" /> AI-Powered Analysis
+              </span>
+              {(result || error) && (
+                <button onClick={reset} className="btn-secondary">
+                  <Plus className="w-4 h-4" /> New Claim
+                </button>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-[1600px] mx-auto px-6 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* LEFT: Form + Upload */}
+            <div className="lg:col-span-2 space-y-5">
+              {/* Partner Details */}
+              <section className="card">
+                <div className="card-header">
+                  <Building2 className="w-5 h-5 text-brand-700" />
+                  <h2 className="section-title">Partner Details</h2>
+                </div>
+                <div className="card-body grid grid-cols-2 gap-4">
+                  <div className="col-span-1">
+                    <label className="label">Partner ID *</label>
+                    <input className={clsx('input-field', errs.partnerId && 'error')} placeholder="1557861"
+                      value={claim.partnerId} onChange={e => setField('partnerId', e.target.value)} />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="label">Partner Name *</label>
+                    <input className={clsx('input-field', errs.partnerName && 'error')} placeholder="s-peers AG"
+                      value={claim.partnerName} onChange={e => setField('partnerName', e.target.value)} />
+                  </div>
+                </div>
+              </section>
+
+              {/* Budget & Funding */}
+              <section className="card">
+                <div className="card-header">
+                  <Euro className="w-5 h-5 text-brand-700" />
+                  <h2 className="section-title">Budget & Funding</h2>
+                </div>
+                <div className="card-body grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Budget Period From *</label>
+                    <input type="date" className={clsx('input-field', errs.budgetPeriodFrom && 'error')}
+                      value={claim.budgetPeriodFrom} onChange={e => setField('budgetPeriodFrom', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Budget Period To *</label>
+                    <input type="date" className={clsx('input-field', errs.budgetPeriodTo && 'error')}
+                      value={claim.budgetPeriodTo} onChange={e => setField('budgetPeriodTo', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Budget Allocation (€) *</label>
+                    <input type="number" step="0.01" className={clsx('input-field', errs.budgetAllocationAmount && 'error')}
+                      placeholder="1614.77" value={claim.budgetAllocationAmount}
+                      onChange={e => setField('budgetAllocationAmount', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Funding Approved (€) *</label>
+                    <input type="number" step="0.01" className={clsx('input-field', errs.fundingApproved && 'error')}
+                      placeholder="1614.77" value={claim.fundingApproved}
+                      onChange={e => setField('fundingApproved', e.target.value)} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="label">Category *</label>
+                    <select className={clsx('input-field', errs.category && 'error')}
+                      value={claim.category} onChange={e => setField('category', e.target.value)}>
+                      <option value="">Select category</option>
+                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </section>
+
+              {/* Request Details */}
+              <section className="card">
+                <div className="card-header">
+                  <Hash className="w-5 h-5 text-brand-700" />
+                  <h2 className="section-title">Request Details</h2>
+                </div>
+                <div className="card-body grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="label">Request Number *</label>
+                    <input className={clsx('input-field', errs.requestNumber && 'error')} placeholder="3UJNKL4QDMK"
+                      value={claim.requestNumber} onChange={e => setField('requestNumber', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Activity Type *</label>
+                    <select className={clsx('input-field', errs.activityType && 'error')}
+                      value={claim.activityType} onChange={e => setField('activityType', e.target.value)}>
+                      <option value="">Select type</option>
+                      {ACTIVITY_TYPES.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Activity *</label>
+                    <select className={clsx('input-field', errs.activity && 'error')} disabled={!claim.activityType}
+                      value={claim.activity} onChange={e => setField('activity', e.target.value)}>
+                      <option value="">{claim.activityType ? 'Select activity' : 'Pick activity type first'}</option>
+                      {activities.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </section>
+
+              {/* Dates */}
+              <section className="card">
+                <div className="card-header">
+                  <Calendar className="w-5 h-5 text-brand-700" />
+                  <h2 className="section-title">Activity & Funding Dates</h2>
+                </div>
+                <div className="card-body grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Fund Request Submitted *</label>
+                    <input type="date" className={clsx('input-field', errs.fundRequestSubmittedDate && 'error')}
+                      value={claim.fundRequestSubmittedDate} onChange={e => setField('fundRequestSubmittedDate', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Fund Approved Date</label>
+                    <input type="date" className="input-field"
+                      value={claim.fundApprovedDate} onChange={e => setField('fundApprovedDate', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Activity Start Date *</label>
+                    <input type="date" className={clsx('input-field', errs.activityStartDate && 'error')}
+                      value={claim.activityStartDate} onChange={e => setField('activityStartDate', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Activity End Date *</label>
+                    <input type="date" className={clsx('input-field', errs.activityEndDate && 'error')}
+                      value={claim.activityEndDate} onChange={e => setField('activityEndDate', e.target.value)} />
+                  </div>
+                </div>
+              </section>
+
+              {/* Documents */}
+              <section className="card">
+                <div className="card-header justify-between">
+                  <div className="flex items-center gap-3">
+                    <Layers className="w-5 h-5 text-brand-700" />
+                    <h2 className="section-title">Supporting Documents</h2>
+                  </div>
+                  <span className="badge-neutral">{docs.length} uploaded</span>
+                </div>
+                <div className="card-body space-y-3">
+                  <div
+                    onDragOver={e => { e.preventDefault(); setDrag(true); }}
+                    onDragLeave={() => setDrag(false)}
+                    onDrop={onDrop}
+                    onClick={() => fileRef.current?.click()}
+                    className={clsx(
+                      'relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all',
+                      drag ? 'border-brand-600 bg-brand-50' : 'border-slate-300 hover:border-brand-500 hover:bg-slate-50',
+                    )}
+                  >
+                    <Upload className={clsx('w-8 h-8 mx-auto mb-2', drag ? 'text-brand-600' : 'text-slate-400')} />
+                    <p className="text-sm font-medium text-slate-700">Drop files here or click to browse</p>
+                    <p className="text-xs text-slate-500 mt-1">PDF, Images, DOCX, XLSX, CSV, TXT — up to 25MB</p>
+                    <input ref={fileRef} type="file" multiple className="hidden"
+                      accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.txt,.csv,.json"
+                      onChange={e => e.target.files && addFiles(e.target.files)} />
+                  </div>
+
+                  {docs.length > 0 && (
+                    <ul className="space-y-2">
+                      {docs.map(d => (
+                        <li key={d.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 group">
+                          {getFileIcon(d.name, d.type)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-800 truncate">{d.name}</p>
+                            <p className="text-xs text-slate-500">{formatSize(d.size)}</p>
+                          </div>
+                          <button onClick={() => setDocs(docs.filter(x => x.id !== d.id))}
+                            className="p-1 text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </section>
+
+              {/* Submit */}
+              <div className="sticky bottom-4">
+                {error && (
+                  <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{error}</span>
+                  </div>
+                )}
+                <button onClick={submit} disabled={busy} className="btn-primary w-full h-12 text-base">
+                  {busy ? <><Loader2 className="w-5 h-5 animate-spin" /> Validating...</>
+                        : <><FileSearch className="w-5 h-5" /> Validate Claim <ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </div>
+            </div>
+
+            {/* RIGHT: Results */}
+            <div className="lg:col-span-3">
+              <div className="lg:sticky lg:top-[80px]">
+                {busy ? <LoadingPanel steps={STEPS} current={step} />
+                  : result ? <ResultsPanel result={result} stats={stats!} tab={tab} setTab={setTab} />
+                  : <EmptyPanel />}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <footer className="max-w-[1600px] mx-auto px-6 py-6 text-center text-xs text-slate-500">
+          Powered by Claude AI — Results are analytical recommendations and require human review for final approval.
+        </footer>
+      </div>
+    </>
+  );
+}
+
+// -------------------- Sub-panels --------------------
+
+function EmptyPanel() {
+  return (
+    <div className="card animate-fade-in">
+      <div className="card-body py-16 text-center">
+        <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-brand-50 to-brand-100 flex items-center justify-center">
+          <FileCheck className="w-10 h-10 text-brand-600" />
+        </div>
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">Ready for Validation</h3>
+        <p className="text-sm text-slate-600 max-w-md mx-auto mb-6">
+          Fill in the claim details, upload supporting documents, and submit. Our AI will analyze every document against program guidelines and provide a comprehensive validation report.
+        </p>
+        <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
+          {[
+            { Icon: FileSearch, label: 'Evidence Extraction' },
+            { Icon: BarChart3, label: 'Field Validation' },
+            { Icon: ClipboardList, label: 'Guideline Checks' },
+          ].map(({ Icon, label }) => (
+            <div key={label} className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <Icon className="w-5 h-5 text-brand-600 mx-auto mb-1" />
+              <p className="text-xs font-medium text-slate-700">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoadingPanel({ steps, current }: { steps: string[]; current: number }) {
+  return (
+    <div className="card animate-fade-in">
+      <div className="card-body py-12">
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-4 border-brand-100 border-t-brand-600 animate-spin" />
+            <Sparkles className="w-6 h-6 text-brand-600 absolute inset-0 m-auto" />
+          </div>
+          <h3 className="mt-4 text-lg font-semibold text-slate-900">Analyzing Your Claim</h3>
+          <p className="text-sm text-slate-600 mt-1">This may take 30-60 seconds</p>
+        </div>
+        <ol className="space-y-3 max-w-md mx-auto">
+          {steps.map((s, i) => (
+            <li key={s} className={clsx(
+              'flex items-center gap-3 p-3 rounded-lg transition-all',
+              i < current && 'bg-emerald-50',
+              i === current && 'bg-brand-50 ring-1 ring-brand-200',
+              i > current && 'bg-slate-50 opacity-60',
+            )}>
+              {i < current ? <CheckCircle className="w-5 h-5 text-emerald-500" />
+                : i === current ? <Loader2 className="w-5 h-5 text-brand-600 animate-spin" />
+                : <Clock className="w-5 h-5 text-slate-400" />}
+              <span className={clsx('text-sm', i === current ? 'font-semibold text-slate-900' : 'text-slate-600')}>{s}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+function ResultsPanel({ result, stats, tab, setTab }: {
+  result: ValidationResult;
+  stats: { pass: number; fail: number; warn: number; total: number; criticalIssues: number };
+  tab: 'overview' | 'fields' | 'documents' | 'guidelines' | 'issues';
+  setTab: (t: 'overview' | 'fields' | 'documents' | 'guidelines' | 'issues') => void;
+}) {
+  const d = DECISION_STYLES[result.decision];
+  const { Icon } = d;
+
+  return (
+    <div className="space-y-4 animate-slide-up">
+      {/* Decision card */}
+      <div className={clsx('rounded-xl border ring-1', d.bg, d.ring, 'p-6')}>
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 p-3 bg-white rounded-xl shadow-sm">
+            <Icon className={clsx('w-8 h-8', d.text)} />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-baseline gap-3 mb-1">
+              <h2 className={clsx('text-2xl font-bold', d.text)}>{d.label}</h2>
+              <span className="text-sm text-slate-600">• Confidence {result.confidence}%</span>
+            </div>
+            <p className={clsx('text-sm leading-relaxed', d.text)}>{result.summary}</p>
+          </div>
+        </div>
+        {/* Confidence bar */}
+        <div className="mt-4 bg-white/70 rounded-full h-2 overflow-hidden">
+          <div className="h-full bg-current rounded-full progress-bar"
+            style={{ ['--progress-width' as string]: `${result.confidence}%`, width: `${result.confidence}%` } as React.CSSProperties} />
+        </div>
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-4 gap-3">
+        <StatCard label="Checks Passed" value={stats.pass} total={stats.total} tone="emerald" />
+        <StatCard label="Failed / Missing" value={stats.fail} total={stats.total} tone="red" />
+        <StatCard label="Warnings" value={stats.warn} total={stats.total} tone="amber" />
+        <StatCard label="Critical Issues" value={stats.criticalIssues} tone="orange" />
+      </div>
+
+      {/* Tabs */}
+      <div className="card">
+        <div className="card-header overflow-x-auto">
+          <nav className="flex gap-1">
+            {([
+              ['overview', 'Overview', BarChart3],
+              ['fields', `Fields (${result.fieldValidations.length})`, ClipboardList],
+              ['documents', `Documents (${result.documentAnalysis.length})`, FileText],
+              ['guidelines', `Guidelines (${result.guidelineChecks.length})`, FileCheck],
+              ['issues', `Issues (${result.issues.length})`, AlertOctagon],
+            ] as const).map(([key, label, I]) => (
+              <button key={key} onClick={() => setTab(key)}
+                className={clsx('tab-btn flex items-center gap-1.5 whitespace-nowrap', tab === key && 'active')}>
+                <I className="w-4 h-4" /> {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="card-body">
+          {tab === 'overview' && <OverviewTab result={result} />}
+          {tab === 'fields' && <FieldsTab result={result} />}
+          {tab === 'documents' && <DocumentsTab result={result} />}
+          {tab === 'guidelines' && <GuidelinesTab result={result} />}
+          {tab === 'issues' && <IssuesTab result={result} />}
+        </div>
+      </div>
+
+      <p className="text-xs text-slate-500 text-center">
+        Audited {new Date(result.auditTimestamp).toLocaleString()} • {result.processingNotes}
+      </p>
+    </div>
+  );
+}
+
+function StatCard({ label, value, total, tone }: { label: string; value: number; total?: number; tone: 'emerald' | 'red' | 'amber' | 'orange' }) {
+  const tones = {
+    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    red:     'bg-red-50 border-red-200 text-red-700',
+    amber:   'bg-amber-50 border-amber-200 text-amber-700',
+    orange:  'bg-orange-50 border-orange-200 text-orange-700',
+  };
+  return (
+    <div className={clsx('rounded-lg border px-3 py-2.5', tones[tone])}>
+      <p className="text-[11px] font-medium uppercase tracking-wider opacity-75">{label}</p>
+      <p className="text-xl font-bold mt-0.5">
+        {value}{total !== undefined && <span className="text-sm opacity-60"> / {total}</span>}
+      </p>
+    </div>
+  );
+}
+
+function OverviewTab({ result }: { result: ValidationResult }) {
+  const topIssues = result.issues.slice(0, 4);
+  return (
+    <div className="space-y-5">
+      {result.recommendations.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-brand-600" /> Recommendations
+          </h4>
+          <ul className="space-y-1.5">
+            {result.recommendations.map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                <ChevronRight className="w-4 h-4 text-brand-600 flex-shrink-0 mt-0.5" />
+                <span>{r}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {topIssues.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-800 mb-2">Top Issues</h4>
+          <div className="space-y-2">
+            {topIssues.map((i, idx) => (
+              <div key={idx} className="p-3 rounded-lg border border-slate-200 bg-slate-50">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-800">{i.category}</p>
+                  <span className={clsx('badge border', SEVERITY_STYLES[i.severity])}>{i.severity.toUpperCase()}</span>
+                </div>
+                <p className="text-sm text-slate-600 mt-1">{i.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FieldsTab({ result }: { result: ValidationResult }) {
+  return (
+    <div className="overflow-x-auto -mx-6 px-6">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left border-b border-slate-200">
+            <th className="pb-2 font-semibold text-xs uppercase tracking-wider text-slate-500">Field</th>
+            <th className="pb-2 font-semibold text-xs uppercase tracking-wider text-slate-500">Submitted</th>
+            <th className="pb-2 font-semibold text-xs uppercase tracking-wider text-slate-500">Extracted</th>
+            <th className="pb-2 font-semibold text-xs uppercase tracking-wider text-slate-500">Status</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {result.fieldValidations.map((f, i) => {
+            const s = STATUS_STYLES[f.status] ?? STATUS_STYLES.warning;
+            return (
+              <tr key={i} className="align-top">
+                <td className="py-3 pr-4">
+                  <p className="font-medium text-slate-800">{f.label}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{f.note}</p>
+                </td>
+                <td className="py-3 pr-4 text-slate-700 break-words">{f.submittedValue || '—'}</td>
+                <td className="py-3 pr-4 text-slate-700 break-words">{f.extractedValue || '—'}</td>
+                <td className="py-3">
+                  <span className={clsx('badge border', s.cls)}>
+                    <s.Icon className="w-3 h-3" /> {s.label}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DocumentsTab({ result }: { result: ValidationResult }) {
+  if (!result.documentAnalysis.length)
+    return <p className="text-sm text-slate-500">No documents analyzed.</p>;
+  return (
+    <div className="space-y-3">
+      {result.documentAnalysis.map((d, i) => (
+        <div key={i} className="p-4 rounded-lg border border-slate-200">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <h4 className="font-semibold text-slate-900 text-sm">{d.fileName}</h4>
+              <p className="text-xs text-slate-500 mt-0.5">Type: {d.type}</p>
+            </div>
+            <span className={clsx('badge border',
+              d.relevance === 'high' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+              d.relevance === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+              'bg-slate-100 text-slate-600 border-slate-200',
+            )}>{d.relevance} relevance</span>
+          </div>
+          <p className="text-sm text-slate-700 mb-3">{d.summary}</p>
+          {d.keyDataFound.length > 0 && (
+            <div className="mb-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Key Data Found</p>
+              <ul className="text-xs text-slate-700 space-y-0.5">
+                {d.keyDataFound.map((k, j) => <li key={j}>• {k}</li>)}
+              </ul>
+            </div>
+          )}
+          {d.issues.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Issues</p>
+              <ul className="text-xs text-amber-800 space-y-0.5">
+                {d.issues.map((k, j) => <li key={j}>• {k}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GuidelinesTab({ result }: { result: ValidationResult }) {
+  return (
+    <ul className="divide-y divide-slate-100">
+      {result.guidelineChecks.map((g, i) => {
+        const s = STATUS_STYLES[g.status] ?? STATUS_STYLES.warning;
+        return (
+          <li key={i} className="py-3 flex items-start gap-3">
+            <s.Icon className={clsx('w-5 h-5 flex-shrink-0 mt-0.5',
+              g.status === 'pass' ? 'text-emerald-500' :
+              g.status === 'fail' ? 'text-red-500' :
+              g.status === 'warning' ? 'text-amber-500' :
+              g.status === 'partial' ? 'text-blue-500' :
+              'text-slate-400',
+            )} />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-slate-800">{g.requirement}</p>
+              <p className="text-xs text-slate-600 mt-0.5">{g.detail}</p>
+            </div>
+            <span className={clsx('badge border', s.cls)}>{s.label}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function IssuesTab({ result }: { result: ValidationResult }) {
+  if (!result.issues.length)
+    return (
+      <div className="text-center py-8">
+        <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+        <p className="text-sm font-medium text-slate-800">No issues detected</p>
+      </div>
+    );
+  const order: SeverityType[] = ['critical', 'high', 'medium', 'low', 'info'];
+  const sorted = [...result.issues].sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
+  return (
+    <div className="space-y-3">
+      {sorted.map((i, idx) => (
+        <div key={idx} className="p-4 rounded-lg border border-slate-200 bg-white">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <span className={clsx('badge border', SEVERITY_STYLES[i.severity])}>{i.severity.toUpperCase()}</span>
+              <p className="text-sm font-semibold text-slate-900">{i.category}</p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-700 mb-2">{i.description}</p>
+          <div className="text-xs text-slate-600 bg-slate-50 rounded p-2 border border-slate-100">
+            <span className="font-semibold text-slate-700">Recommendation: </span>{i.recommendation}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
