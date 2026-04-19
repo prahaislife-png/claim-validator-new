@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs';
 import path from 'path';
 import type { ClaimFormData, UploadedDocument, ValidationResult } from '@/lib/types';
+import { verifyUser } from '@/lib/supabaseAdmin';
 
 export const config = {
   api: {
@@ -57,6 +58,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: 'ANTHROPIC_API_KEY not set. Add it to Vercel Environment Variables.',
     });
   }
+
+  // Auth check — reject unauthenticated requests
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  const auth  = token ? await verifyUser(token) : null;
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
   const { claimData, documents = [] }: {
     claimData: ClaimFormData;
@@ -178,6 +184,33 @@ Decision rules:
 
     const result: ValidationResult = JSON.parse(match[0]);
     result.auditTimestamp = now;
+
+    // Persist submission + activity log (non-blocking)
+    auth.adminClient.from('claim_submissions').insert({
+      user_id:        auth.user.id,
+      email:          auth.profile.email,
+      partner_id:     claimData.partnerId,
+      partner_name:   claimData.partnerName,
+      request_number: claimData.requestNumber,
+      claim_data:     claimData,
+      document_count: documents.length,
+      decision:       result.decision,
+      confidence:     result.confidence,
+    }).then(() => {});
+
+    auth.adminClient.from('activity_logs').insert({
+      user_id:  auth.user.id,
+      email:    auth.profile.email,
+      action:   'claim_submission',
+      metadata: {
+        partner_id:   claimData.partnerId,
+        partner_name: claimData.partnerName,
+        decision:     result.decision,
+        confidence:   result.confidence,
+        doc_count:    documents.length,
+      },
+    }).then(() => {});
+
     return res.status(200).json({ result });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

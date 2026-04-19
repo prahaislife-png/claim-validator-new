@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Head from 'next/head';
 import clsx from 'clsx';
 import {
@@ -6,11 +7,13 @@ import {
   AlertTriangle, ChevronRight, Loader2, Shield, BarChart3, ClipboardList,
   FileCheck, AlertOctagon, Info, FileSpreadsheet, Building2,
   Calendar, Euro, Hash, Clock, Sparkles,
-  FileSearch, Layers, Plus, ArrowRight, Printer, FileDown,
+  FileSearch, Layers, Plus, ArrowRight, Printer, FileDown, LogOut, Settings,
 } from 'lucide-react';
 import type {
   ClaimFormData, UploadedDocument, ValidationResult, StatusType, SeverityType, DecisionType,
 } from '@/lib/types';
+import { useAuth, logAction } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 const CATEGORIES = ['Event', 'Content Syndication', 'Digital Marketing', 'Telemarketing', 'Training', 'Trade Show', 'Other'];
 const ACTIVITY_TYPES = ['Event', 'Digital', 'Content', 'Training', 'Demand Generation', 'Other'];
@@ -86,6 +89,9 @@ function formatSize(bytes: number) {
 }
 
 export default function Page() {
+  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const router = useRouter();
+
   const [claim, setClaim] = useState<ClaimFormData>(EMPTY_FORM);
   const [docs, setDocs] = useState<UploadedDocument[]>([]);
   const [busy, setBusy] = useState(false);
@@ -97,6 +103,12 @@ export default function Page() {
   const [step, setStep] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace('/login');
+  }, [authLoading, user, router]);
+
+  if (authLoading || !user || !profile) return null;
 
   const STEPS = useMemo(() => ([
     'Extracting content from documents',
@@ -158,16 +170,23 @@ export default function Page() {
     if (docs.length === 0) { setError('Please upload at least one supporting document'); return; }
     setError(null); setResult(null); setBusy(true); setStep(0); setTab('overview');
 
+    logAction('analysis_run', { partner_id: claim.partnerId, partner_name: claim.partnerName, doc_count: docs.length });
+
     const ticker = setInterval(() => setStep(s => (s < STEPS.length - 1 ? s + 1 : s)), 2200);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/validate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ claimData: claim, documents: docs }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Validation failed');
       setResult(data.result);
+      logAction('result_view', { decision: data.result.decision, confidence: data.result.confidence });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unexpected error');
     } finally {
@@ -209,7 +228,7 @@ export default function Page() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <span className="badge-info hidden md:inline-flex">
                 <Sparkles className="w-3 h-3" /> AI-Powered Analysis
               </span>
@@ -218,6 +237,23 @@ export default function Page() {
                   <Plus className="w-4 h-4" /> New Claim
                 </button>
               )}
+              {profile?.role === 'admin' && (
+                <button onClick={() => router.push('/admin')} className="btn-secondary hidden sm:inline-flex">
+                  <Settings className="w-4 h-4" /> Admin
+                </button>
+              )}
+              <button
+                onClick={async () => {
+                  logAction('logout');
+                  await signOut();
+                  router.replace('/login');
+                }}
+                className="btn-secondary"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
             </div>
           </div>
         </header>
@@ -424,7 +460,7 @@ export default function Page() {
             <div className="lg:col-span-3">
               <div className="lg:sticky lg:top-[80px]">
                 {busy ? <LoadingPanel steps={STEPS} current={step} />
-                  : result ? <ResultsPanel result={result} stats={stats!} tab={tab} setTab={setTab} onViewSummary={() => setShowSummary(true)} />
+                  : result ? <ResultsPanel result={result} stats={stats!} tab={tab} setTab={setTab} onViewSummary={() => { setShowSummary(true); logAction('report_download', { decision: result.decision }); }} />
                   : <EmptyPanel />}
               </div>
             </div>
