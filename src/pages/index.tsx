@@ -229,7 +229,9 @@ export default function Page() {
               {/* Partner Details */}
               <section className="card">
                 <div className="card-header">
-                  <Building2 className="w-5 h-5 text-brand-700" />
+                  <div className="icon-tile bg-gradient-to-br from-brand-500 to-brand-700">
+                    <Building2 className="w-5 h-5 text-white" />
+                  </div>
                   <h2 className="section-title">Partner Details</h2>
                 </div>
                 <div className="card-body grid grid-cols-2 gap-4">
@@ -249,7 +251,9 @@ export default function Page() {
               {/* Budget & Funding */}
               <section className="card">
                 <div className="card-header">
-                  <Euro className="w-5 h-5 text-brand-700" />
+                  <div className="icon-tile bg-gradient-to-br from-emerald-500 to-emerald-700">
+                    <Euro className="w-5 h-5 text-white" />
+                  </div>
                   <h2 className="section-title">Budget & Funding</h2>
                 </div>
                 <div className="card-body grid grid-cols-2 gap-4">
@@ -289,7 +293,9 @@ export default function Page() {
               {/* Request Details */}
               <section className="card">
                 <div className="card-header">
-                  <Hash className="w-5 h-5 text-brand-700" />
+                  <div className="icon-tile bg-gradient-to-br from-violet-500 to-violet-700">
+                    <Hash className="w-5 h-5 text-white" />
+                  </div>
                   <h2 className="section-title">Request Details</h2>
                 </div>
                 <div className="card-body grid grid-cols-2 gap-4">
@@ -320,7 +326,9 @@ export default function Page() {
               {/* Dates */}
               <section className="card">
                 <div className="card-header">
-                  <Calendar className="w-5 h-5 text-brand-700" />
+                  <div className="icon-tile bg-gradient-to-br from-amber-500 to-orange-600">
+                    <Calendar className="w-5 h-5 text-white" />
+                  </div>
                   <h2 className="section-title">Activity & Funding Dates</h2>
                 </div>
                 <div className="card-body grid grid-cols-2 gap-4">
@@ -351,7 +359,9 @@ export default function Page() {
               <section className="card">
                 <div className="card-header justify-between">
                   <div className="flex items-center gap-3">
-                    <Layers className="w-5 h-5 text-brand-700" />
+                    <div className="icon-tile bg-gradient-to-br from-rose-500 to-pink-700">
+                      <Layers className="w-5 h-5 text-white" />
+                    </div>
                     <h2 className="section-title">Supporting Documents</h2>
                   </div>
                   <span className="badge-neutral">{docs.length} uploaded</span>
@@ -438,25 +448,46 @@ export default function Page() {
 
 function EmptyPanel() {
   return (
-    <div className="card animate-fade-in">
-      <div className="card-body py-10">
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-brand-50 to-brand-100 flex items-center justify-center">
-            <FileCheck className="w-10 h-10 text-brand-600" />
+    <div className="card animate-fade-in overflow-hidden">
+      <div className="relative bg-gradient-to-br from-brand-700 via-brand-800 to-indigo-900 text-white px-8 py-10">
+        <div className="absolute inset-0 opacity-20" style={{
+          backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(255,255,255,0.3), transparent 40%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.2), transparent 40%)',
+        }} />
+        <div className="relative flex items-start gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0">
+            <Shield className="w-7 h-7 text-white" />
           </div>
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">How the Claim Validation Portal Works</h3>
-          <p className="text-sm text-slate-600 max-w-lg mx-auto">
-            An AI-assisted tool for validating partner marketing claims (MDF). Enter your claim details,
-            upload the supporting evidence, and receive a structured validation report in under a minute.
-          </p>
+          <div>
+            <h3 className="text-2xl font-bold tracking-tight">Claim Validation Portal</h3>
+            <p className="text-sm text-white/80 mt-1 max-w-xl">
+              An AI-powered analyst for partner marketing (MDF) claims. Enter your claim details, upload
+              supporting evidence, and receive a structured validation report in under a minute.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
+                <Sparkles className="w-3 h-3" /> Claude AI
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
+                <FileCheck className="w-3 h-3" /> Guideline-aware
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
+                <Clock className="w-3 h-3" /> ~45 sec
+              </span>
+            </div>
+          </div>
         </div>
+      </div>
 
+      <div className="card-body py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="p-4 rounded-lg border border-slate-200 bg-slate-50">
-            <h4 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              <Upload className="w-4 h-4 text-brand-600" /> What to upload
+          <div className="p-5 rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white">
+            <h4 className="text-sm font-bold text-violet-900 mb-3 flex items-center gap-2">
+              <div className="icon-tile w-7 h-7 bg-gradient-to-br from-violet-500 to-violet-700">
+                <Upload className="w-4 h-4 text-white" />
+              </div>
+              What to upload
             </h4>
-            <ul className="text-xs text-slate-700 space-y-1.5">
+            <ul className="text-xs text-slate-700 space-y-1.5 pl-1">
               <li>• Invoices and receipts</li>
               <li>• Event photos or screenshots</li>
               <li>• Attendance lists or registrations</li>
@@ -464,11 +495,14 @@ function EmptyPanel() {
               <li>• Contracts, quotes, purchase orders</li>
             </ul>
           </div>
-          <div className="p-4 rounded-lg border border-slate-200 bg-slate-50">
-            <h4 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              <FileCheck className="w-4 h-4 text-brand-600" /> What gets checked
+          <div className="p-5 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+            <h4 className="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
+              <div className="icon-tile w-7 h-7 bg-gradient-to-br from-emerald-500 to-emerald-700">
+                <FileCheck className="w-4 h-4 text-white" />
+              </div>
+              What gets checked
             </h4>
-            <ul className="text-xs text-slate-700 space-y-1.5">
+            <ul className="text-xs text-slate-700 space-y-1.5 pl-1">
               <li>• Monetary amounts reconciled vs. claim</li>
               <li>• Dates align with activity window</li>
               <li>• Partner name and ID consistency</li>
@@ -478,17 +512,17 @@ function EmptyPanel() {
           </div>
         </div>
 
-        <p className="text-xs text-slate-500 text-center mb-4">Only <span className="font-semibold text-slate-700">Partner ID</span> and <span className="font-semibold text-slate-700">Partner Name</span> are mandatory — all other fields are optional to help improve validation accuracy.</p>
-
-        <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { Icon: FileSearch, label: 'Evidence Extraction' },
-            { Icon: BarChart3, label: 'Field Validation' },
-            { Icon: ClipboardList, label: 'Guideline Checks' },
-          ].map(({ Icon, label }) => (
-            <div key={label} className="p-3 rounded-lg bg-white border border-slate-200 text-center">
-              <Icon className="w-5 h-5 text-brand-600 mx-auto mb-1" />
-              <p className="text-xs font-medium text-slate-700">{label}</p>
+            { Icon: FileSearch,    label: 'Evidence Extraction', tone: 'from-violet-500 to-indigo-600',  bg: 'from-violet-50 to-white',  border: 'border-violet-200' },
+            { Icon: BarChart3,     label: 'Field Validation',    tone: 'from-emerald-500 to-teal-600',   bg: 'from-emerald-50 to-white', border: 'border-emerald-200' },
+            { Icon: ClipboardList, label: 'Guideline Checks',    tone: 'from-amber-500 to-orange-600',   bg: 'from-amber-50 to-white',   border: 'border-amber-200' },
+          ].map(({ Icon, label, tone, bg, border }) => (
+            <div key={label} className={clsx('p-4 rounded-xl bg-gradient-to-br text-center border', bg, border)}>
+              <div className={clsx('icon-tile mx-auto mb-2 bg-gradient-to-br', tone)}>
+                <Icon className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-xs font-semibold text-slate-800">{label}</p>
             </div>
           ))}
         </div>
@@ -609,16 +643,16 @@ function ResultsPanel({ result, stats, tab, setTab, onViewSummary }: {
 
 function StatCard({ label, value, total, tone }: { label: string; value: number; total?: number; tone: 'emerald' | 'red' | 'amber' | 'orange' }) {
   const tones = {
-    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-    red:     'bg-red-50 border-red-200 text-red-700',
-    amber:   'bg-amber-50 border-amber-200 text-amber-700',
-    orange:  'bg-orange-50 border-orange-200 text-orange-700',
+    emerald: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-800',
+    red:     'bg-gradient-to-br from-red-50 to-red-100 border-red-200 text-red-800',
+    amber:   'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 text-amber-800',
+    orange:  'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 text-orange-800',
   };
   return (
-    <div className={clsx('rounded-lg border px-3 py-2.5', tones[tone])}>
-      <p className="text-[11px] font-medium uppercase tracking-wider opacity-75">{label}</p>
-      <p className="text-xl font-bold mt-0.5">
-        {value}{total !== undefined && <span className="text-sm opacity-60"> / {total}</span>}
+    <div className={clsx('rounded-xl border px-3 py-3 shadow-sm', tones[tone])}>
+      <p className="text-[11px] font-semibold uppercase tracking-wider opacity-75">{label}</p>
+      <p className="text-2xl font-bold mt-0.5 tracking-tight">
+        {value}{total !== undefined && <span className="text-sm font-semibold opacity-60"> / {total}</span>}
       </p>
     </div>
   );
