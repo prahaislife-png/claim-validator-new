@@ -109,6 +109,51 @@ export default function Page() {
     if (!authLoading && !user) router.replace('/login');
   }, [authLoading, user, router]);
 
+  // Hooks must be declared before any conditional return (Rules of Hooks).
+  // These depend only on stable state/setters that are always available.
+  const STEPS = useMemo(() => ([
+    'Extracting content from documents',
+    'Cross-referencing claim fields',
+    'Checking guideline compliance',
+    'Running AI document analysis',
+    'Generating validation report',
+  ]), []);
+
+  const readFile = useCallback((file: File): Promise<UploadedDocument> => new Promise((resolve, reject) => {
+    const isText = file.type.startsWith('text/') || /\.(txt|csv|json|xml|log|md)$/i.test(file.name);
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const result = reader.result as string;
+      const content = isText ? result : (result.split(',')[1] ?? result);
+      resolve({
+        id: Math.random().toString(36).slice(2),
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        content,
+        isText,
+      });
+    };
+    if (isText) reader.readAsText(file); else reader.readAsDataURL(file);
+  }), []);
+
+  const addFiles = useCallback(async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    const added: UploadedDocument[] = [];
+    for (const f of list) {
+      if (docs.some(d => d.name === f.name && d.size === f.size)) continue;
+      if (f.size > 25 * 1024 * 1024) { setError(`${f.name} exceeds 25MB size limit`); continue; }
+      try { added.push(await readFile(f)); } catch { /* skip */ }
+    }
+    setDocs(d => [...d, ...added]);
+  }, [docs, readFile]);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setDrag(false);
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  }, [addFiles]);
+
   // Still resolving session / profile
   if (authLoading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -141,14 +186,6 @@ export default function Page() {
 
   if (!profile) return null;
 
-  const STEPS = useMemo(() => ([
-    'Extracting content from documents',
-    'Cross-referencing claim fields',
-    'Checking guideline compliance',
-    'Running AI document analysis',
-    'Generating validation report',
-  ]), []);
-
   const setField = (key: keyof ClaimFormData, value: string) => {
     setClaim(prev => key === 'activityType' ? { ...prev, activityType: value, activity: '' } : { ...prev, [key]: value });
     if (errs[key]) setErrs(e => { const n = { ...e }; delete n[key]; return n; });
@@ -160,41 +197,6 @@ export default function Page() {
     setErrs(next);
     return Object.keys(next).length === 0;
   };
-
-  const readFile = (file: File): Promise<UploadedDocument> => new Promise((resolve, reject) => {
-    const isText = file.type.startsWith('text/') || /\.(txt|csv|json|xml|log|md)$/i.test(file.name);
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const result = reader.result as string;
-      const content = isText ? result : (result.split(',')[1] ?? result);
-      resolve({
-        id: Math.random().toString(36).slice(2),
-        name: file.name,
-        type: file.type || 'application/octet-stream',
-        size: file.size,
-        content,
-        isText,
-      });
-    };
-    if (isText) reader.readAsText(file); else reader.readAsDataURL(file);
-  });
-
-  const addFiles = useCallback(async (files: FileList | File[]) => {
-    const list = Array.from(files);
-    const added: UploadedDocument[] = [];
-    for (const f of list) {
-      if (docs.some(d => d.name === f.name && d.size === f.size)) continue;
-      if (f.size > 25 * 1024 * 1024) { setError(`${f.name} exceeds 25MB size limit`); continue; }
-      try { added.push(await readFile(f)); } catch { /* skip */ }
-    }
-    setDocs(d => [...d, ...added]);
-  }, [docs]);
-
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setDrag(false);
-    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
-  }, [addFiles]);
 
   const submit = async () => {
     if (!validate()) { setError('Partner ID and Partner Name are required'); return; }
