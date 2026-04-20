@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { Shield, Loader2, AlertTriangle, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Shield, Loader2, AlertTriangle, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuth, logAction } from '@/lib/auth';
 
 export default function LoginPage() {
@@ -30,9 +30,7 @@ export default function LoginPage() {
         setError('Invalid email or password.');
         return;
       }
-      // profile is fetched by auth context — check after a tick
       await new Promise(r => setTimeout(r, 400));
-      // log action non-blockingly
       logAction('login', { email });
       router.replace('/');
     } finally {
@@ -49,75 +47,108 @@ export default function LoginPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-sm">
-          {/* Logo / brand */}
+      <div
+        className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden"
+        style={{
+          backgroundImage:
+            'radial-gradient(1200px 600px at 10% -10%, rgba(99,102,241,0.08), transparent 60%),' +
+            'radial-gradient(900px 500px at 100% 110%, rgba(59,130,246,0.08), transparent 60%),' +
+            'linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%)',
+        }}
+      >
+        <div className="w-full max-w-[400px] relative">
+          {/* Brand */}
           <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 flex items-center justify-center shadow-lg mx-auto mb-4">
-              <Shield className="w-7 h-7 text-white" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 shadow-[0_10px_30px_-10px_rgba(30,64,175,0.5)] ring-1 ring-white/40 mb-5">
+              <Shield className="w-8 h-8 text-white" strokeWidth={2} />
             </div>
-            <h1 className="text-xl font-bold text-slate-900">Claim Validation Portal</h1>
-            <p className="text-sm text-slate-500 mt-1">Sign in to continue</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+              Claim Validation Portal
+            </h1>
+            <p className="text-sm text-slate-500 mt-1.5">
+              Sign in to access your workspace
+            </p>
           </div>
 
           {/* Card */}
-          <div className="card">
-            <div className="card-body py-7 space-y-4">
-              {error && (
-                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <span>{error}</span>
-                </div>
-              )}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_40px_-12px_rgba(15,23,42,0.12)] p-8">
+            {error && (
+              <div className="flex items-start gap-2 p-3 mb-5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="label">Email</label>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-xs font-semibold text-slate-700 tracking-wide">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  className="w-full h-11 px-3.5 text-sm text-slate-900 bg-white border border-slate-200 rounded-lg placeholder-slate-400
+                             focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/10
+                             transition-all duration-150"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  autoComplete="email"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="password" className="block text-xs font-semibold text-slate-700 tracking-wide">
+                  Password
+                </label>
+                <div className="relative">
                   <input
-                    type="email"
-                    className="input-field"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    autoComplete="email"
-                    autoFocus
+                    id="password"
+                    type={showPw ? 'text' : 'password'}
+                    className="w-full h-11 pl-3.5 pr-11 text-sm text-slate-900 bg-white border border-slate-200 rounded-lg placeholder-slate-400
+                               focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/10
+                               transition-all duration-150"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    autoComplete="current-password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(v => !v)}
+                    aria-label={showPw ? 'Hide password' : 'Show password'}
+                    className="absolute inset-y-0 right-0 w-10 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-r-lg
+                               focus:outline-none focus:text-slate-700 transition-colors"
+                  >
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
+              </div>
 
-                <div>
-                  <label className="label">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      className="input-field pr-10"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPw(v => !v)}
-                      className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
-                    >
-                      {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <button type="submit" disabled={busy} className="btn-primary w-full">
-                  {busy
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</>
-                    : 'Sign In'}
-                </button>
-              </form>
-            </div>
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full h-11 inline-flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-lg
+                           bg-gradient-to-b from-brand-700 to-brand-900
+                           shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_8px_20px_-8px_rgba(30,64,175,0.55)]
+                           hover:from-brand-800 hover:to-brand-900
+                           active:scale-[0.99]
+                           focus:outline-none focus:ring-4 focus:ring-brand-600/25
+                           disabled:opacity-60 disabled:cursor-not-allowed
+                           transition-all duration-150"
+              >
+                {busy ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</>
+                ) : (
+                  <>Sign In <ArrowRight className="w-4 h-4" /></>
+                )}
+              </button>
+            </form>
           </div>
 
           <p className="text-center text-xs text-slate-400 mt-6">
-            <span className="inline-flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> Powered by Claude AI · A project by Govind Amilkanthwar
-            </span>
+            A project by Govind Amilkanthwar
           </p>
         </div>
       </div>
