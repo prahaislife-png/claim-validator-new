@@ -5,55 +5,96 @@ import path from 'path';
 import type { ClaimFormData, UploadedDocument, ValidationResult, AiIntelligenceAnswer } from '@/lib/types';
 import { verifyUser } from '@/lib/supabaseAdmin';
 
-function computeAiIntelligenceAnswer(result: ValidationResult): AiIntelligenceAnswer {
-  const critical      = result.issues.filter(i => i.severity === 'critical').length;
-  const high          = result.issues.filter(i => i.severity === 'high').length;
-  const medium        = result.issues.filter(i => i.severity === 'medium').length;
-
-  const gFails        = result.guidelineChecks.filter(g => g.status === 'fail' || g.status === 'missing').length;
-  const gWarns        = result.guidelineChecks.filter(g => g.status === 'warning' || g.status === 'partial').length;
-
-  const fFails        = result.fieldValidations.filter(f => f.status === 'fail').length;
-  const fMissing      = result.fieldValidations.filter(f => f.status === 'missing').length;
-  const fWarns        = result.fieldValidations.filter(f => f.status === 'warning' || f.status === 'partial').length;
-  const fPasses       = result.fieldValidations.filter(f => f.status === 'pass').length;
+function fallbackAiAnswer(result: ValidationResult): AiIntelligenceAnswer {
+  const critical = result.issues.filter(i => i.severity === 'critical').length;
+  const gFails   = result.guidelineChecks.filter(g => g.status === 'fail' || g.status === 'missing').length;
+  const fFails   = result.fieldValidations.filter(f => f.status === 'fail').length;
+  const fMissing = result.fieldValidations.filter(f => f.status === 'missing').length;
+  const high     = result.issues.filter(i => i.severity === 'high').length;
 
   let recommendation: AiIntelligenceAnswer['recommendation'];
-
   if (result.decision === 'REJECTED' || critical > 0 || gFails >= 2 || fFails >= 3) {
     recommendation = 'Reject';
-  } else if (
-    result.decision === 'APPROVED' &&
-    high === 0 && gFails === 0 && fFails === 0 && fMissing === 0
-  ) {
+  } else if (result.decision === 'APPROVED' && high === 0 && gFails === 0 && fFails === 0 && fMissing === 0) {
     recommendation = 'Approve';
   } else {
     recommendation = 'Hold';
   }
-
-  const findings: string[] = [];
-  if (fPasses)  findings.push(`${fPasses} field(s) verified against evidence`);
-  if (fFails)   findings.push(`${fFails} field mismatch(es)`);
-  if (fMissing) findings.push(`${fMissing} missing field(s)`);
-  if (fWarns)   findings.push(`${fWarns} partial field match(es)`);
-  if (gFails)   findings.push(`${gFails} guideline requirement(s) failed`);
-  if (gWarns)   findings.push(`${gWarns} guideline(s) with warnings`);
-  if (critical) findings.push(`${critical} critical issue(s)`);
-  if (high)     findings.push(`${high} high-severity issue(s)`);
-  if (medium)   findings.push(`${medium} medium-severity issue(s)`);
-
-  const verdict =
-    recommendation === 'Approve'
-      ? 'Required supporting evidence is present and core submitted data aligns with extracted documentation with no critical inconsistencies.'
+  return {
+    recommendation,
+    reason: recommendation === 'Approve'
+      ? 'Evidence aligns well with the claim. Looks good to approve.'
       : recommendation === 'Reject'
-        ? 'Required supporting evidence is missing or major contradictions make the claim unsuitable for approval in its current state.'
-        : 'Evidence is mostly sufficient but non-critical gaps or inconsistencies require manual confirmation before approval.';
+        ? 'Critical gaps or contradictions found. Cannot approve without resolution.'
+        : 'Mostly solid, but a couple of things need a quick manual check before approving.',
+  };
+}
 
-  const reason = findings.length
-    ? `${verdict} Findings: ${findings.join(', ')}.`
-    : verdict;
+async function computeAiIntelligenceAnswer(
+  result: ValidationResult,
+  claimData: ClaimFormData,
+  client: Anthropic,
+): Promise<AiIntelligenceAnswer> {
+  const issueLines = result.issues.length
+    ? result.issues.map(i => `- [${i.severity}] ${i.category}: ${i.description}`).join('\n')
+    : '- None';
 
-  return { recommendation, reason };
+  const failedGuidelines = result.guidelineChecks
+    .filter(g => g.status === 'fail' || g.status === 'missing')
+    .map(g => `- ${g.requirement}: ${g.detail}`)
+    .join('\n') || '- None';
+
+  const prompt = `You are a senior MDF claims analyst with deep knowledge of the SAP partner ecosystem and the enterprise software industry. You give final advisory opinions that combine structured report findings with your real-world knowledge of the partner company.
+
+=== CLAIM REPORT ===
+Partner: ${claimData.partnerName} (ID: ${claimData.partnerId})
+Activity: ${claimData.activity} | Category: ${claimData.category}
+Claimed amount: €${claimData.fundingApproved}
+Report decision: ${result.decision} | Confidence: ${result.confidence}%
+Report summary: ${result.summary}
+
+Issues found:
+${issueLines}
+
+Failed guideline requirements:
+${failedGuidelines}
+=== END REPORT ===
+
+Your task: Give a final advisory recommendation on this claim.
+
+Draw on your knowledge of ${claimData.partnerName} — who they are in the market, their reputation, how long they have been operating, their standing in the SAP ecosystem or relevant industry, and whether there are any known concerns about their practices.
+
+Then combine that external perspective with the report findings to decide: Approve, Hold, or Reject.
+
+Rules for your recommendation:
+- If the company is reputable and the claim evidence is mostly solid (even with minor FX / formatting issues), lean toward Approve.
+- Use Hold only when you genuinely need one specific manual check (e.g. FX rate verification) before it is safe to approve.
+- Use Reject only if there are real red flags — missing critical evidence, known bad-actor behavior, or outright contradictions.
+
+Tone: casual and direct, like a colleague giving a quick opinion. E.g. "s-peers AG is a solid SAP partner in Switzerland — approve this. Just get the FX rate documented." Do NOT use bullet points or formal report language.
+
+Respond with ONLY valid JSON, no other text:
+{"recommendation":"Approve"|"Reject"|"Hold","reason":"your 1–2 sentence casual opinion, max 70 words"}`;
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-opus-4-7',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const raw = response.content[0]?.type === 'text' ? response.content[0].text.trim() : '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('no JSON');
+    const parsed = JSON.parse(match[0]);
+    if (!['Approve', 'Reject', 'Hold'].includes(parsed.recommendation)) throw new Error('bad recommendation');
+    return {
+      recommendation: parsed.recommendation as AiIntelligenceAnswer['recommendation'],
+      reason: String(parsed.reason ?? '').slice(0, 600),
+    };
+  } catch {
+    return fallbackAiAnswer(result);
+  }
 }
 
 export const config = {
@@ -235,7 +276,7 @@ Decision rules:
 
     const result: ValidationResult = JSON.parse(match[0]);
     result.auditTimestamp = now;
-    result.aiIntelligenceAnswer = computeAiIntelligenceAnswer(result);
+    result.aiIntelligenceAnswer = await computeAiIntelligenceAnswer(result, claimData, anthropic);
 
     // Persist submission + activity log (non-blocking)
     auth.adminClient.from('claim_submissions').insert({
