@@ -925,6 +925,30 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
         <div style={{ fontSize: '12px', color: dc.text }}>{result.summary}</div>
       </div>
 
+      {/* AI Intelligence Answer */}
+      {result.aiIntelligenceAnswer && (() => {
+        const aia = result.aiIntelligenceAnswer;
+        const rc = aia.recommendation === 'Approve'
+          ? PRINT_STATUS_COLORS.pass
+          : aia.recommendation === 'Reject'
+            ? PRINT_STATUS_COLORS.fail
+            : PRINT_STATUS_COLORS.warning;
+        return (
+          <div style={{ marginBottom: '20px', breakInside: 'avoid' as const }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#475569', marginBottom: '8px' }}>AI Intelligence Answer</div>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px 14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>AI Recommendation:</span>
+                <PrintBadge label={aia.recommendation} colors={rc} />
+              </div>
+              <div style={{ fontSize: '11px', color: '#475569' }}>
+                <span style={{ fontWeight: 600, color: '#1e293b' }}>Reason:</span> {aia.reason}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Claim Details */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#475569', marginBottom: '8px' }}>Claim Details</div>
@@ -1057,6 +1081,28 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
               </div>
               <p className={clsx('text-sm leading-relaxed', d.text)}>{result.summary}</p>
             </div>
+
+            {result.aiIntelligenceAnswer && (
+              <section>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">AI Intelligence Answer</h3>
+                <div className="border border-slate-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xs font-semibold text-slate-600">AI Recommendation:</span>
+                    <span className={clsx(
+                      'badge border',
+                      result.aiIntelligenceAnswer.recommendation === 'Approve' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : result.aiIntelligenceAnswer.recommendation === 'Reject' ? 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                    )}>
+                      {result.aiIntelligenceAnswer.recommendation}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-700">
+                    <span className="font-semibold text-slate-900">Reason:</span> {result.aiIntelligenceAnswer.reason}
+                  </p>
+                </div>
+              </section>
+            )}
 
             <section>
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">Claim Details</h3>

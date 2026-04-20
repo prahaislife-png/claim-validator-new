@@ -2,8 +2,59 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs';
 import path from 'path';
-import type { ClaimFormData, UploadedDocument, ValidationResult } from '@/lib/types';
+import type { ClaimFormData, UploadedDocument, ValidationResult, AiIntelligenceAnswer } from '@/lib/types';
 import { verifyUser } from '@/lib/supabaseAdmin';
+
+function computeAiIntelligenceAnswer(result: ValidationResult): AiIntelligenceAnswer {
+  const critical      = result.issues.filter(i => i.severity === 'critical').length;
+  const high          = result.issues.filter(i => i.severity === 'high').length;
+  const medium        = result.issues.filter(i => i.severity === 'medium').length;
+
+  const gFails        = result.guidelineChecks.filter(g => g.status === 'fail' || g.status === 'missing').length;
+  const gWarns        = result.guidelineChecks.filter(g => g.status === 'warning' || g.status === 'partial').length;
+
+  const fFails        = result.fieldValidations.filter(f => f.status === 'fail').length;
+  const fMissing      = result.fieldValidations.filter(f => f.status === 'missing').length;
+  const fWarns        = result.fieldValidations.filter(f => f.status === 'warning' || f.status === 'partial').length;
+  const fPasses       = result.fieldValidations.filter(f => f.status === 'pass').length;
+
+  let recommendation: AiIntelligenceAnswer['recommendation'];
+
+  if (result.decision === 'REJECTED' || critical > 0 || gFails >= 2 || fFails >= 3) {
+    recommendation = 'Reject';
+  } else if (
+    result.decision === 'APPROVED' &&
+    high === 0 && gFails === 0 && fFails === 0 && fMissing === 0
+  ) {
+    recommendation = 'Approve';
+  } else {
+    recommendation = 'Hold';
+  }
+
+  const findings: string[] = [];
+  if (fPasses)  findings.push(`${fPasses} field(s) verified against evidence`);
+  if (fFails)   findings.push(`${fFails} field mismatch(es)`);
+  if (fMissing) findings.push(`${fMissing} missing field(s)`);
+  if (fWarns)   findings.push(`${fWarns} partial field match(es)`);
+  if (gFails)   findings.push(`${gFails} guideline requirement(s) failed`);
+  if (gWarns)   findings.push(`${gWarns} guideline(s) with warnings`);
+  if (critical) findings.push(`${critical} critical issue(s)`);
+  if (high)     findings.push(`${high} high-severity issue(s)`);
+  if (medium)   findings.push(`${medium} medium-severity issue(s)`);
+
+  const verdict =
+    recommendation === 'Approve'
+      ? 'Required supporting evidence is present and core submitted data aligns with extracted documentation with no critical inconsistencies.'
+      : recommendation === 'Reject'
+        ? 'Required supporting evidence is missing or major contradictions make the claim unsuitable for approval in its current state.'
+        : 'Evidence is mostly sufficient but non-critical gaps or inconsistencies require manual confirmation before approval.';
+
+  const reason = findings.length
+    ? `${verdict} Findings: ${findings.join(', ')}.`
+    : verdict;
+
+  return { recommendation, reason };
+}
 
 export const config = {
   api: {
@@ -184,6 +235,7 @@ Decision rules:
 
     const result: ValidationResult = JSON.parse(match[0]);
     result.auditTimestamp = now;
+    result.aiIntelligenceAnswer = computeAiIntelligenceAnswer(result);
 
     // Persist submission + activity log (non-blocking)
     auth.adminClient.from('claim_submissions').insert({

@@ -59,6 +59,13 @@ export interface ValidationIssue {
   recommendation: string;
 }
 
+export type AiRecommendationType = 'Approve' | 'Reject' | 'Hold';
+
+export interface AiIntelligenceAnswer {
+  recommendation: AiRecommendationType;
+  reason: string;
+}
+
 export interface ValidationResult {
   decision: DecisionType;
   confidence: number;
@@ -70,4 +77,5 @@ export interface ValidationResult {
   recommendations: string[];
   auditTimestamp: string;
   processingNotes: string;
+  aiIntelligenceAnswer?: AiIntelligenceAnswer;
 }
