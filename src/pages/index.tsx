@@ -241,7 +241,7 @@ export default function Page() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="min-h-screen bg-[#f0f2f5]">
+      <div className="bg-[#f0f2f5]">
         {/* SAP-style Header */}
         <header className="sticky top-0 z-40 bg-gradient-to-r from-[#354a5f] to-[#2c3e50] shadow-lg">
           <div className="w-[96vw] max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-10 h-14 flex items-center justify-between">
@@ -402,33 +402,7 @@ export default function Page() {
                 </div>
               </section>
 
-              {/* Submit */}
-              <div>
-                {error && (
-                  <div className="mb-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span>{error}</span>
-                  </div>
-                )}
-                <button onClick={submit} disabled={busy}
-                  className="w-full h-11 inline-flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-lg
-                    bg-gradient-to-r from-[#0070f2] to-[#0054b6] hover:from-[#0062d6] hover:to-[#004da6]
-                    shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                  {busy ? <><Loader2 className="w-5 h-5 animate-spin" /> Validating...</>
-                        : <><Shield className="w-5 h-5" /> Validate Claim <ArrowRight className="w-4 h-4" /></>}
-                </button>
-              </div>
-            </div>
-
-            {/* RIGHT: Info / Results + Documents */}
-            <div className="w-full lg:w-[52%] space-y-2.5">
-              <div>
-                {busy ? <LoadingPanel steps={STEPS} current={step} />
-                  : result ? <ResultsPanel result={result} stats={stats!} tab={tab} setTab={setTab} onViewSummary={() => { setShowSummary(true); logAction('report_download', { decision: result.decision }); }} />
-                  : <EmptyPanel />}
-              </div>
-
-              {/* Documents — in right column */}
+              {/* Supporting Documents */}
               <section className="sap-card">
                 <div className="sap-card-header justify-between">
                   <div className="flex items-center gap-2.5">
@@ -477,14 +451,35 @@ export default function Page() {
                   )}
                 </div>
               </section>
+
+              {/* Submit */}
+              <div>
+                {error && (
+                  <div className="mb-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{error}</span>
+                  </div>
+                )}
+                <button onClick={submit} disabled={busy}
+                  className="w-full h-11 inline-flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-lg
+                    bg-gradient-to-r from-[#0070f2] to-[#0054b6] hover:from-[#0062d6] hover:to-[#004da6]
+                    shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                  {busy ? <><Loader2 className="w-5 h-5 animate-spin" /> Validating...</>
+                        : <><Shield className="w-5 h-5" /> Validate Claim <ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </div>
+            </div>
+
+            {/* RIGHT: Info / Results */}
+            <div className="w-full lg:w-[52%]">
+              <div>
+                {busy ? <LoadingPanel steps={STEPS} current={step} />
+                  : result ? <ResultsPanel result={result} stats={stats!} tab={tab} setTab={setTab} onViewSummary={() => { setShowSummary(true); logAction('report_download', { decision: result.decision }); }} />
+                  : <EmptyPanel />}
+              </div>
             </div>
           </div>
         </main>
-
-        <footer className="w-[96vw] max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-10 py-2 text-center text-xs text-slate-400 space-y-0.5">
-          <p>A project by <span className="font-semibold text-slate-500">Govind Amilkanthwar</span></p>
-          <p>Results are analytical recommendations and require human review for final approval.</p>
-        </footer>
 
         {showSummary && result && (
           <SummaryModal claim={claim} result={result} onClose={() => setShowSummary(false)} />
