@@ -16,7 +16,6 @@ import type {
 import { useAuth, logAction } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
-const CATEGORIES = ['Event', 'Content Syndication', 'Digital Marketing', 'Telemarketing', 'Training', 'Trade Show', 'Other'];
 const ACTIVITY_TYPES = ['Event', 'Digital', 'Content', 'Training', 'Demand Generation', 'Other'];
 const ACTIVITY_MAP: Record<string, string[]> = {
   Event: ['Physical Events (SAP Led)', 'Physical Events (Partner Led)', 'Virtual Events', 'Webinar', 'Trade Show', 'Co-branded Event'],
@@ -29,24 +28,21 @@ const ACTIVITY_MAP: Record<string, string[]> = {
 
 const REQUIRED: (keyof ClaimFormData)[] = ['partnerName'];
 
-const FIELD_LABELS: Record<keyof ClaimFormData, string> = {
+const FIELD_LABELS: Record<string, string> = {
   partnerName: 'Partner Name',
   budgetAllocationAmount: 'Funds Requested (€)',
-  category: 'Category',
   requestNumber: 'Request Number',
   activityType: 'Activity Type',
   activity: 'Activity',
   fundRequestSubmittedDate: 'Fund Request Submitted',
-  fundApprovedDate: 'Fund Approved Date',
   activityStartDate: 'Activity Start Date',
   activityEndDate: 'Activity End Date',
-  fundingApproved: 'Funding Approved (€)',
 };
 
 const EMPTY_FORM: ClaimFormData = {
-  partnerName: '', budgetAllocationAmount: '', category: '', requestNumber: '',
-  activityType: '', activity: '', fundRequestSubmittedDate: '', fundApprovedDate: '',
-  activityStartDate: '', activityEndDate: '', fundingApproved: '',
+  partnerName: '', budgetAllocationAmount: '', requestNumber: '',
+  activityType: '', activity: '', fundRequestSubmittedDate: '',
+  activityStartDate: '', activityEndDate: '',
 };
 
 const STATUS_STYLES: Record<StatusType, { cls: string; label: string; Icon: React.ComponentType<{ className?: string }> }> = {
@@ -317,26 +313,12 @@ export default function Page() {
                   </div>
                   <h2 className="section-title">Budget & Funding</h2>
                 </div>
-                <div className="card-body grid grid-cols-2 gap-4">
+                <div className="card-body">
                   <div>
                     <label className="label">Funds Requested (€)</label>
                     <input type="number" step="0.01" className="input-field"
                       placeholder="1614.77" value={claim.budgetAllocationAmount}
                       onChange={e => setField('budgetAllocationAmount', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="label">Funding Approved (€)</label>
-                    <input type="number" step="0.01" className="input-field"
-                      placeholder="1614.77" value={claim.fundingApproved}
-                      onChange={e => setField('fundingApproved', e.target.value)} />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="label">Category</label>
-                    <select className="input-field"
-                      value={claim.category} onChange={e => setField('category', e.target.value)}>
-                      <option value="">Select category</option>
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
                   </div>
                 </div>
               </section>
@@ -387,11 +369,6 @@ export default function Page() {
                     <label className="label">Fund Request Submitted</label>
                     <input type="date" className="input-field"
                       value={claim.fundRequestSubmittedDate} onChange={e => setField('fundRequestSubmittedDate', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="label">Fund Approved Date</label>
-                    <input type="date" className="input-field"
-                      value={claim.fundApprovedDate} onChange={e => setField('fundApprovedDate', e.target.value)} />
                   </div>
                   <div>
                     <label className="label">Activity Start Date</label>
@@ -512,7 +489,7 @@ function EmptyPanel() {
             <h3 className="text-2xl font-bold tracking-tight">Claim Validation Portal</h3>
             <p className="text-sm text-white/80 mt-1 max-w-xl">
               An AI-powered analyst for partner marketing (MDF) claims. Enter your claim details, upload
-              supporting evidence, and receive a structured validation report in under a minute.
+              supporting evidence, and receive a structured validation report.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
@@ -520,9 +497,6 @@ function EmptyPanel() {
               </span>
               <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
                 <FileCheck className="w-3 h-3" /> Guideline-aware
-              </span>
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
-                <Clock className="w-3 h-3" /> ~45 sec
               </span>
             </div>
           </div>
@@ -556,7 +530,7 @@ function EmptyPanel() {
             <ul className="text-xs text-slate-700 space-y-1.5 pl-1">
               <li>• Monetary amounts reconciled vs. claim</li>
               <li>• Dates align with activity window</li>
-              <li>• Partner name and ID consistency</li>
+              <li>• Forgery and document authenticity indicators</li>
               <li>• Proof of performance present</li>
               <li>• Program guideline compliance</li>
             </ul>
@@ -938,10 +912,10 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
         <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#475569', marginBottom: '8px' }}>Claim Details</div>
         <table style={{ width: '100%', borderCollapse: 'collapse' as const, border: '1px solid #e2e8f0' }}>
           <tbody>
-            {(Object.entries(FIELD_LABELS) as [keyof ClaimFormData, string][]).map(([key, label]) => (
+            {Object.entries(FIELD_LABELS).map(([key, label]) => (
               <tr key={key} style={{ borderBottom: '1px solid #f1f5f9' }}>
                 <td style={{ padding: '6px 10px', background: '#f8fafc', fontWeight: 600, color: '#475569', width: '35%', fontSize: '11px' }}>{label}</td>
-                <td style={{ padding: '6px 10px', color: '#1e293b', fontSize: '11px' }}>{claim[key] || '—'}</td>
+                <td style={{ padding: '6px 10px', color: '#1e293b', fontSize: '11px' }}>{claim[key as keyof ClaimFormData] || '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -1093,10 +1067,10 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
               <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
                   <tbody className="divide-y divide-slate-100">
-                    {(Object.entries(FIELD_LABELS) as [keyof ClaimFormData, string][]).map(([key, label]) => (
+                    {Object.entries(FIELD_LABELS).map(([key, label]) => (
                       <tr key={key}>
                         <td className="py-2 px-3 bg-slate-50 font-medium text-slate-700 w-1/3">{label}</td>
-                        <td className="py-2 px-3 text-slate-800">{claim[key] || '—'}</td>
+                        <td className="py-2 px-3 text-slate-800">{claim[key as keyof ClaimFormData] || '—'}</td>
                       </tr>
                     ))}
                   </tbody>

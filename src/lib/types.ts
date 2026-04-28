@@ -1,15 +1,15 @@
 export interface ClaimFormData {
   partnerName: string;
   budgetAllocationAmount: string;
-  category: string;
+  category?: string;
   requestNumber: string;
   activityType: string;
   activity: string;
   fundRequestSubmittedDate: string;
-  fundApprovedDate: string;
+  fundApprovedDate?: string;
   activityStartDate: string;
   activityEndDate: string;
-  fundingApproved: string;
+  fundingApproved?: string;
 }
 
 export interface UploadedDocument {
