@@ -244,7 +244,7 @@ export default function Page() {
       <div className="min-h-screen bg-[#f0f2f5]">
         {/* SAP-style Header */}
         <header className="sticky top-0 z-40 bg-gradient-to-r from-[#354a5f] to-[#2c3e50] shadow-lg">
-          <div className="max-w-[1440px] mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="w-[96vw] max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-10 h-14 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center">
@@ -291,10 +291,10 @@ export default function Page() {
           </div>
         </header>
 
-        <main className="max-w-[1440px] mx-auto px-6 py-6">
+        <main className="w-[96vw] max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-10 py-6">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* LEFT: Form */}
-            <div className="w-full lg:w-[46%] space-y-4">
+            <div className="w-full lg:w-[42%] space-y-4">
               {/* Page title */}
               <div className="mb-1">
                 <h2 className="text-xl font-bold text-[#1b2a3d] tracking-tight">Submit Claim for Validation</h2>
@@ -470,7 +470,7 @@ export default function Page() {
             </div>
 
             {/* RIGHT: Info / Results */}
-            <div className="w-full lg:w-[54%]">
+            <div className="w-full lg:w-[58%]">
               <div className="lg:sticky lg:top-[72px]">
                 {busy ? <LoadingPanel steps={STEPS} current={step} />
                   : result ? <ResultsPanel result={result} stats={stats!} tab={tab} setTab={setTab} onViewSummary={() => { setShowSummary(true); logAction('report_download', { decision: result.decision }); }} />
@@ -480,7 +480,7 @@ export default function Page() {
           </div>
         </main>
 
-        <footer className="max-w-[1440px] mx-auto px-6 py-5 text-center text-xs text-slate-400 space-y-0.5">
+        <footer className="w-[96vw] max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-10 py-5 text-center text-xs text-slate-400 space-y-0.5">
           <p>A project by <span className="font-semibold text-slate-500">Govind Amilkanthwar</span></p>
           <p>Results are analytical recommendations and require human review for final approval.</p>
         </footer>
