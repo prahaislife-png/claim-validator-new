@@ -291,57 +291,58 @@ export default function Page() {
           </div>
         </header>
 
-        <main className="w-[96vw] max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-10 py-6">
-          <div className="flex flex-col lg:flex-row gap-6">
+        <main className="w-[96vw] max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-10 py-3">
+          <div className="flex flex-col lg:flex-row gap-5">
             {/* LEFT: Form */}
-            <div className="w-full lg:w-[42%] space-y-4">
+            <div className="w-full lg:w-[48%] space-y-2.5">
               {/* Page title */}
-              <div className="mb-1">
-                <h2 className="text-xl font-bold text-[#1b2a3d] tracking-tight">Submit Claim for Validation</h2>
-                <p className="text-sm text-slate-500 mt-0.5">Enter claim details, upload supporting evidence, and get an AI-powered validation report.</p>
+              <div>
+                <h2 className="text-lg font-bold text-[#1b2a3d] tracking-tight">Submit Claim for Validation</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Enter claim details, upload supporting evidence, and get an AI-powered validation report.</p>
               </div>
 
-              {/* Partner Details */}
-              <section className="sap-card">
-                <div className="sap-card-header">
-                  <div className="sap-icon bg-gradient-to-br from-[#0070f2] to-[#0054b6]">
-                    <Building2 className="w-4 h-4 text-white" />
+              {/* Partner Details + Budget side by side */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <section className="sap-card">
+                  <div className="sap-card-header">
+                    <div className="sap-icon bg-gradient-to-br from-[#0070f2] to-[#0054b6]">
+                      <Building2 className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <h3 className="sap-card-title">Partner Details</h3>
                   </div>
-                  <h3 className="sap-card-title">Partner Details</h3>
-                </div>
-                <div className="sap-card-body">
-                  <div>
-                    <label className="sap-label">Partner Name *</label>
-                    <input className={clsx('sap-input', errs.partnerName && 'border-red-400 focus:ring-red-500')} placeholder="s-peers AG"
-                      value={claim.partnerName} onChange={e => setField('partnerName', e.target.value)} />
-                    <p className="text-[11px] text-slate-400 mt-1">Partner ID will be extracted automatically from uploaded documents.</p>
+                  <div className="sap-card-body">
+                    <div>
+                      <label className="sap-label">Partner Name *</label>
+                      <input className={clsx('sap-input', errs.partnerName && 'border-red-400 focus:ring-red-500')} placeholder="s-peers AG"
+                        value={claim.partnerName} onChange={e => setField('partnerName', e.target.value)} />
+                      <p className="text-[10px] text-slate-400 mt-0.5">Partner ID extracted from documents.</p>
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
 
-              {/* Budget & Funding */}
-              <section className="sap-card">
-                <div className="sap-card-header">
-                  <div className="sap-icon bg-gradient-to-br from-emerald-500 to-emerald-700">
-                    <Euro className="w-4 h-4 text-white" />
+                <section className="sap-card">
+                  <div className="sap-card-header">
+                    <div className="sap-icon bg-gradient-to-br from-emerald-500 to-emerald-700">
+                      <Euro className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <h3 className="sap-card-title">Budget & Funding</h3>
                   </div>
-                  <h3 className="sap-card-title">Budget & Funding</h3>
-                </div>
-                <div className="sap-card-body">
-                  <div>
-                    <label className="sap-label">Funds Requested (€)</label>
-                    <input type="number" step="0.01" className="sap-input"
-                      placeholder="1614.77" value={claim.budgetAllocationAmount}
-                      onChange={e => setField('budgetAllocationAmount', e.target.value)} />
+                  <div className="sap-card-body">
+                    <div>
+                      <label className="sap-label">Funds Requested (€)</label>
+                      <input type="number" step="0.01" className="sap-input"
+                        placeholder="1614.77" value={claim.budgetAllocationAmount}
+                        onChange={e => setField('budgetAllocationAmount', e.target.value)} />
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              </div>
 
               {/* Request Details */}
               <section className="sap-card">
                 <div className="sap-card-header">
                   <div className="sap-icon bg-gradient-to-br from-violet-500 to-violet-700">
-                    <Hash className="w-4 h-4 text-white" />
+                    <Hash className="w-3.5 h-3.5 text-white" />
                   </div>
                   <h3 className="sap-card-title">Request Details</h3>
                 </div>
@@ -376,7 +377,7 @@ export default function Page() {
               <section className="sap-card">
                 <div className="sap-card-header">
                   <div className="sap-icon bg-gradient-to-br from-amber-500 to-orange-600">
-                    <Calendar className="w-4 h-4 text-white" />
+                    <Calendar className="w-3.5 h-3.5 text-white" />
                   </div>
                   <h3 className="sap-card-title">Activity & Funding Dates</h3>
                 </div>
@@ -401,29 +402,55 @@ export default function Page() {
                 </div>
               </section>
 
-              {/* Documents */}
+              {/* Submit */}
+              <div>
+                {error && (
+                  <div className="mb-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{error}</span>
+                  </div>
+                )}
+                <button onClick={submit} disabled={busy}
+                  className="w-full h-11 inline-flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-lg
+                    bg-gradient-to-r from-[#0070f2] to-[#0054b6] hover:from-[#0062d6] hover:to-[#004da6]
+                    shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                  {busy ? <><Loader2 className="w-5 h-5 animate-spin" /> Validating...</>
+                        : <><Shield className="w-5 h-5" /> Validate Claim <ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </div>
+            </div>
+
+            {/* RIGHT: Info / Results + Documents */}
+            <div className="w-full lg:w-[52%] space-y-2.5">
+              <div>
+                {busy ? <LoadingPanel steps={STEPS} current={step} />
+                  : result ? <ResultsPanel result={result} stats={stats!} tab={tab} setTab={setTab} onViewSummary={() => { setShowSummary(true); logAction('report_download', { decision: result.decision }); }} />
+                  : <EmptyPanel />}
+              </div>
+
+              {/* Documents — in right column */}
               <section className="sap-card">
                 <div className="sap-card-header justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="sap-icon bg-gradient-to-br from-rose-500 to-pink-700">
-                      <Layers className="w-4 h-4 text-white" />
+                      <Layers className="w-3.5 h-3.5 text-white" />
                     </div>
                     <h3 className="sap-card-title">Supporting Documents</h3>
                   </div>
                   <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{docs.length} uploaded</span>
                 </div>
-                <div className="sap-card-body space-y-3">
+                <div className="sap-card-body space-y-2.5">
                   <div
                     onDragOver={e => { e.preventDefault(); setDrag(true); }}
                     onDragLeave={() => setDrag(false)}
                     onDrop={onDrop}
                     onClick={() => fileRef.current?.click()}
                     className={clsx(
-                      'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all',
+                      'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all',
                       drag ? 'border-[#0070f2] bg-blue-50/50' : 'border-slate-300 hover:border-[#0070f2]/50 hover:bg-slate-50',
                     )}
                   >
-                    <Upload className={clsx('w-7 h-7 mx-auto mb-1.5', drag ? 'text-[#0070f2]' : 'text-slate-400')} />
+                    <Upload className={clsx('w-6 h-6 mx-auto mb-1', drag ? 'text-[#0070f2]' : 'text-slate-400')} />
                     <p className="text-sm font-medium text-slate-700">Drop files here or click to browse</p>
                     <p className="text-xs text-slate-400 mt-0.5">PDF, Images, DOCX, XLSX, CSV, TXT</p>
                     <input ref={fileRef} type="file" multiple className="hidden"
@@ -434,7 +461,7 @@ export default function Page() {
                   {docs.length > 0 && (
                     <ul className="space-y-1.5">
                       {docs.map(d => (
-                        <li key={d.id} className="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-lg border border-slate-200 group">
+                        <li key={d.id} className="flex items-center gap-2.5 p-2 bg-slate-50 rounded-lg border border-slate-200 group">
                           {getFileIcon(d.name, d.type)}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-slate-800 truncate">{d.name}</p>
@@ -450,37 +477,11 @@ export default function Page() {
                   )}
                 </div>
               </section>
-
-              {/* Submit */}
-              <div className="sticky bottom-4">
-                {error && (
-                  <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span>{error}</span>
-                  </div>
-                )}
-                <button onClick={submit} disabled={busy}
-                  className="w-full h-12 inline-flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-lg
-                    bg-gradient-to-r from-[#0070f2] to-[#0054b6] hover:from-[#0062d6] hover:to-[#004da6]
-                    shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                  {busy ? <><Loader2 className="w-5 h-5 animate-spin" /> Validating...</>
-                        : <><Shield className="w-5 h-5" /> Validate Claim <ArrowRight className="w-4 h-4" /></>}
-                </button>
-              </div>
-            </div>
-
-            {/* RIGHT: Info / Results */}
-            <div className="w-full lg:w-[58%]">
-              <div className="lg:sticky lg:top-[72px]">
-                {busy ? <LoadingPanel steps={STEPS} current={step} />
-                  : result ? <ResultsPanel result={result} stats={stats!} tab={tab} setTab={setTab} onViewSummary={() => { setShowSummary(true); logAction('report_download', { decision: result.decision }); }} />
-                  : <EmptyPanel />}
-              </div>
             </div>
           </div>
         </main>
 
-        <footer className="w-[96vw] max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-10 py-5 text-center text-xs text-slate-400 space-y-0.5">
+        <footer className="w-[96vw] max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-10 py-2 text-center text-xs text-slate-400 space-y-0.5">
           <p>A project by <span className="font-semibold text-slate-500">Govind Amilkanthwar</span></p>
           <p>Results are analytical recommendations and require human review for final approval.</p>
         </footer>
@@ -499,26 +500,25 @@ function EmptyPanel() {
   return (
     <div className="sap-card animate-fade-in overflow-hidden">
       {/* Hero */}
-      <div className="relative bg-gradient-to-br from-[#354a5f] via-[#2c3e50] to-[#1a2a3a] text-white px-7 py-9 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-[#354a5f] via-[#2c3e50] to-[#1a2a3a] text-white px-5 py-5 overflow-hidden">
         <div className="absolute inset-0 opacity-[0.07]" style={{
           backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
           backgroundSize: '24px 24px',
         }} />
-        <div className="relative flex items-start gap-4">
-          <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-7 h-7 text-white" />
+        <div className="relative flex items-start gap-3">
+          <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 flex items-center justify-center flex-shrink-0">
+            <Shield className="w-5.5 h-5.5 text-white" />
           </div>
           <div>
-            <h3 className="text-xl font-bold tracking-tight">Claim Validation Portal</h3>
-            <p className="text-[13px] text-white/70 mt-1.5 max-w-lg leading-relaxed">
-              An AI-powered analyst for partner marketing (MDF) claims. Enter your claim details, upload
-              supporting evidence, and receive a structured validation report.
+            <h3 className="text-lg font-bold tracking-tight">Claim Validation Portal</h3>
+            <p className="text-[12px] text-white/70 mt-1 max-w-lg leading-relaxed">
+              AI-powered analyst for partner marketing (MDF) claims. Enter details, upload evidence, and receive a structured validation report.
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-white/10 border border-white/15">
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/10 border border-white/15">
                 <Sparkles className="w-3 h-3" /> AI-powered analysis
               </span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-white/10 border border-white/15">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/10 border border-white/15">
                 <FileCheck className="w-3 h-3" /> Guideline-aware
               </span>
             </div>
@@ -527,17 +527,17 @@ function EmptyPanel() {
       </div>
 
       {/* Content cards */}
-      <div className="p-6 space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="p-4 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* What to upload */}
-          <div className="p-4 rounded-lg border border-violet-200/80 bg-gradient-to-br from-violet-50/50 to-white">
-            <h4 className="text-[13px] font-bold text-violet-900 mb-2.5 flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center flex-shrink-0">
-                <Upload className="w-3.5 h-3.5 text-white" />
+          <div className="p-3 rounded-lg border border-violet-200/80 bg-gradient-to-br from-violet-50/50 to-white">
+            <h4 className="text-[12px] font-bold text-violet-900 mb-2 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center flex-shrink-0">
+                <Upload className="w-3 h-3 text-white" />
               </div>
               What to upload
             </h4>
-            <ul className="text-xs text-slate-600 space-y-1.5 pl-0.5">
+            <ul className="text-[11px] text-slate-600 space-y-1 pl-0.5">
               <li className="flex items-start gap-1.5"><span className="text-violet-400 mt-px">&#9679;</span> Invoices and receipts</li>
               <li className="flex items-start gap-1.5"><span className="text-violet-400 mt-px">&#9679;</span> Event photos or screenshots</li>
               <li className="flex items-start gap-1.5"><span className="text-violet-400 mt-px">&#9679;</span> Attendance lists or registrations</li>
@@ -546,14 +546,14 @@ function EmptyPanel() {
             </ul>
           </div>
           {/* What gets checked */}
-          <div className="p-4 rounded-lg border border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 to-white">
-            <h4 className="text-[13px] font-bold text-emerald-900 mb-2.5 flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0">
-                <FileCheck className="w-3.5 h-3.5 text-white" />
+          <div className="p-3 rounded-lg border border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 to-white">
+            <h4 className="text-[12px] font-bold text-emerald-900 mb-2 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0">
+                <FileCheck className="w-3 h-3 text-white" />
               </div>
               What gets checked
             </h4>
-            <ul className="text-xs text-slate-600 space-y-1.5 pl-0.5">
+            <ul className="text-[11px] text-slate-600 space-y-1 pl-0.5">
               <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-px">&#9679;</span> Monetary amounts reconciled vs. claim</li>
               <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-px">&#9679;</span> Dates align with activity window</li>
               <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-px">&#9679;</span> Forgery and document authenticity indicators</li>
@@ -564,18 +564,18 @@ function EmptyPanel() {
         </div>
 
         {/* Three feature cards */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2.5">
           {[
-            { Icon: FileSearch,    label: 'Evidence Extraction', desc: 'AI extracts key data from documents with high accuracy.', tone: 'from-violet-500 to-indigo-600',  bg: 'from-violet-50/60 to-white',  border: 'border-violet-200/70' },
-            { Icon: BarChart3,     label: 'Field Validation',    desc: 'Cross-checks extracted data against claim entries and rules.', tone: 'from-emerald-500 to-teal-600',   bg: 'from-emerald-50/60 to-white', border: 'border-emerald-200/70' },
-            { Icon: ClipboardList, label: 'Guideline Checks',    desc: 'Evaluates claim against program guidelines and policies.', tone: 'from-amber-500 to-orange-600',   bg: 'from-amber-50/60 to-white',   border: 'border-amber-200/70' },
+            { Icon: FileSearch,    label: 'Evidence Extraction', desc: 'AI extracts key data from documents.', tone: 'from-violet-500 to-indigo-600',  bg: 'from-violet-50/60 to-white',  border: 'border-violet-200/70' },
+            { Icon: BarChart3,     label: 'Field Validation',    desc: 'Cross-checks data against claim entries.', tone: 'from-emerald-500 to-teal-600',   bg: 'from-emerald-50/60 to-white', border: 'border-emerald-200/70' },
+            { Icon: ClipboardList, label: 'Guideline Checks',    desc: 'Evaluates against program policies.', tone: 'from-amber-500 to-orange-600',   bg: 'from-amber-50/60 to-white',   border: 'border-amber-200/70' },
           ].map(({ Icon, label, desc, tone, bg, border }) => (
-            <div key={label} className={clsx('p-4 rounded-lg bg-gradient-to-br text-center border', bg, border)}>
-              <div className={clsx('w-9 h-9 rounded-lg mx-auto mb-2 flex items-center justify-center bg-gradient-to-br shadow-sm', tone)}>
-                <Icon className="w-4.5 h-4.5 text-white" />
+            <div key={label} className={clsx('p-3 rounded-lg bg-gradient-to-br text-center border', bg, border)}>
+              <div className={clsx('w-8 h-8 rounded-lg mx-auto mb-1.5 flex items-center justify-center bg-gradient-to-br shadow-sm', tone)}>
+                <Icon className="w-4 h-4 text-white" />
               </div>
-              <p className="text-xs font-bold text-slate-800 mb-0.5">{label}</p>
-              <p className="text-[11px] text-slate-500 leading-snug">{desc}</p>
+              <p className="text-[11px] font-bold text-slate-800 mb-0.5">{label}</p>
+              <p className="text-[10px] text-slate-500 leading-snug">{desc}</p>
             </div>
           ))}
         </div>
@@ -587,16 +587,16 @@ function EmptyPanel() {
 function LoadingPanel({ steps, current }: { steps: string[]; current: number }) {
   return (
     <div className="sap-card animate-fade-in">
-      <div className="px-6 py-12">
-        <div className="flex flex-col items-center mb-8">
+      <div className="px-5 py-8">
+        <div className="flex flex-col items-center mb-6">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-[#0070f2] animate-spin" />
-            <Sparkles className="w-6 h-6 text-[#0070f2] absolute inset-0 m-auto" />
+            <div className="w-14 h-14 rounded-full border-4 border-blue-100 border-t-[#0070f2] animate-spin" />
+            <Sparkles className="w-5 h-5 text-[#0070f2] absolute inset-0 m-auto" />
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-slate-900">Analyzing Your Claim</h3>
-          <p className="text-sm text-slate-500 mt-1">This may take 30-60 seconds</p>
+          <h3 className="mt-3 text-base font-semibold text-slate-900">Analyzing Your Claim</h3>
+          <p className="text-sm text-slate-500 mt-0.5">This may take 30-60 seconds</p>
         </div>
-        <ol className="space-y-3 max-w-md mx-auto">
+        <ol className="space-y-2 max-w-md mx-auto">
           {steps.map((s, i) => (
             <li key={s} className={clsx(
               'flex items-center gap-3 p-3 rounded-lg transition-all',
