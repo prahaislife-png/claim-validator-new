@@ -106,14 +106,26 @@ export const config = {
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-function loadGuidelines(): string {
+type PdfBlock = { type: 'document'; source: { type: 'base64'; media_type: 'application/pdf'; data: string }; title?: string };
+
+function loadGuidelines(): { text: string; pdfBlocks: PdfBlock[] } {
   const dir = path.join(process.cwd(), 'reference_docs');
   const parts: string[] = [];
+  const pdfBlocks: PdfBlock[] = [];
   try {
     for (const f of fs.readdirSync(dir)) {
       const fullPath = path.join(dir, f);
       if (f.endsWith('.txt')) {
         parts.push(`=== ${f} ===\n${fs.readFileSync(fullPath, 'utf-8')}`);
+      } else if (f.endsWith('.pdf')) {
+        try {
+          const data = fs.readFileSync(fullPath).toString('base64');
+          pdfBlocks.push({
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data },
+            title: `[REFERENCE GUIDELINE] ${f}`,
+          });
+        } catch { /* skip unreadable pdf */ }
       } else if (f.endsWith('.xlsx') || f.endsWith('.xls')) {
         try {
           // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -128,9 +140,10 @@ function loadGuidelines(): string {
       }
     }
   } catch { /* no reference_docs dir */ }
-  return parts.length
-    ? parts.join('\n\n')
-    : 'Apply standard partner MDF claim validation practices.';
+  return {
+    text: parts.length ? parts.join('\n\n') : 'Apply standard partner MDF claim validation practices.',
+    pdfBlocks,
+  };
 }
 
 async function toText(doc: UploadedDocument): Promise<string> {
@@ -175,7 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!claimData) return res.status(400).json({ error: 'Missing claimData' });
 
-  const guidelines = loadGuidelines();
+  const { text: guidelines, pdfBlocks: guidelinePdfBlocks } = loadGuidelines();
   const now = new Date().toISOString();
 
   const claimBlock = `=== CLAIM SUBMISSION ===
@@ -250,9 +263,14 @@ Decision rules:
     type Block =
       | Anthropic.TextBlockParam
       | Anthropic.ImageBlockParam
-      | { type: 'document'; source: { type: 'base64'; media_type: 'application/pdf'; data: string }; title?: string };
+      | PdfBlock;
 
     const content: Block[] = [{ type: 'text', text: claimBlock }];
+
+    // Inject reference guideline PDFs
+    for (const pdfBlock of guidelinePdfBlocks) {
+      content.push(pdfBlock);
+    }
 
     for (const doc of documents) {
       if (doc.type === 'application/pdf') {

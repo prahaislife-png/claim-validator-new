@@ -102,6 +102,8 @@ export default function Page() {
   const [drag, setDrag] = useState(false);
   const [step, setStep] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
+  const [showGuidelines, setShowGuidelines] = useState(false);
+  const [guidelineDocs, setGuidelineDocs] = useState<{ name: string; content: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -267,7 +269,17 @@ export default function Page() {
                   <Plus className="w-3.5 h-3.5" /> New
                 </button>
               )}
-              <button className="h-8 px-3 text-xs font-medium text-white/90 bg-white/10 border border-white/20 rounded-md hover:bg-white/20 transition-all hidden sm:inline-flex items-center gap-1.5">
+              <button onClick={async () => {
+                  if (guidelineDocs.length === 0) {
+                    try {
+                      const res = await fetch('/api/source-docs');
+                      const data = await res.json();
+                      if (data.docs?.length) setGuidelineDocs(data.docs);
+                    } catch { /* ignore */ }
+                  }
+                  setShowGuidelines(true);
+                }}
+                className="h-8 px-3 text-xs font-medium text-white/90 bg-white/10 border border-white/20 rounded-md hover:bg-white/20 transition-all hidden sm:inline-flex items-center gap-1.5">
                 <BookOpen className="w-3.5 h-3.5" /> Guidelines
               </button>
               {profile?.role === 'admin' && (
@@ -483,6 +495,10 @@ export default function Page() {
 
         {showSummary && result && (
           <SummaryModal claim={claim} result={result} onClose={() => setShowSummary(false)} />
+        )}
+
+        {showGuidelines && (
+          <GuidelinesModal docs={guidelineDocs} onClose={() => setShowGuidelines(false)} />
         )}
       </div>
     </>
@@ -1200,6 +1216,42 @@ function IssuesTab({ result }: { result: ValidationResult }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function GuidelinesModal({ docs, onClose }: { docs: { name: string; content: string }[]; onClose: () => void }) {
+  const formatName = (name: string) =>
+    name.replace(/\.txt$/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4">
+      <div className="w-full max-w-3xl bg-white rounded-xl shadow-2xl my-8">
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between rounded-t-xl">
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-[#0070f2]" /> Source Guidelines
+          </h2>
+          <button onClick={onClose} className="btn-secondary"><X className="w-4 h-4" /> Close</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {docs.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-8">No guideline documents found.</p>
+          ) : (
+            docs.map((d, i) => (
+              <section key={i}>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-violet-600" />
+                  {formatName(d.name)}
+                </h3>
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                  <pre className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed font-sans">{d.content}</pre>
+                </div>
+              </section>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
