@@ -7,7 +7,7 @@ import {
   Upload, FileText, Image as ImageIcon, File as FileIcon, X, CheckCircle, XCircle,
   AlertTriangle, ChevronRight, Loader2, Shield, BarChart3, ClipboardList,
   FileCheck, AlertOctagon, Info, FileSpreadsheet, Building2,
-  Calendar, Euro, Hash, Clock, Sparkles,
+  Calendar, Euro, Hash, Clock, Sparkles, BookOpen,
   FileSearch, Layers, Plus, ArrowRight, Printer, FileDown, LogOut, Settings,
 } from 'lucide-react';
 import type {
@@ -81,6 +81,13 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function getInitials(email: string | undefined) {
+  if (!email) return 'U';
+  const parts = email.split('@')[0].split(/[._-]/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+}
+
 export default function Page() {
   const { user, profile, loading: authLoading, profileMissing, signOut } = useAuth();
   const router = useRouter();
@@ -101,8 +108,6 @@ export default function Page() {
     if (!authLoading && !user) router.replace('/login');
   }, [authLoading, user, router]);
 
-  // Hooks must be declared before any conditional return (Rules of Hooks).
-  // These depend only on stable state/setters that are always available.
   const STEPS = useMemo(() => ([
     'Extracting content from documents',
     'Cross-referencing claim fields',
@@ -146,26 +151,23 @@ export default function Page() {
     if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
   }, [addFiles]);
 
-  // Still resolving session / profile
   if (authLoading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+    <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5]">
+      <Loader2 className="w-8 h-8 animate-spin text-[#0070f2]" />
     </div>
   );
 
-  if (!user) return null; // redirect handled by useEffect
+  if (!user) return null;
 
-  // Authenticated but no profile row — account not fully set up
   if (profileMissing) return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="card max-w-sm w-full text-center">
-        <div className="card-body py-10 space-y-4">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#f0f2f5]">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm max-w-sm w-full text-center overflow-hidden">
+        <div className="px-6 py-10 space-y-4">
           <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
           <h2 className="text-lg font-bold text-slate-900">Account not fully set up</h2>
           <p className="text-sm text-slate-600">
-            Your login was successful but no user profile was found. This usually means the
-            admin setup did not complete. Please contact your administrator or re-run
-            the setup at <a href="/setup" className="text-brand-700 underline">/setup</a>.
+            Your login was successful but no user profile was found. Please contact your administrator or re-run
+            the setup at <a href="/setup" className="text-[#0070f2] underline">/setup</a>.
           </p>
           <button onClick={async () => { await signOut(); router.replace('/login'); }}
             className="btn-secondary mx-auto">
@@ -230,6 +232,8 @@ export default function Page() {
     criticalIssues: result.issues.filter(i => i.severity === 'critical' || i.severity === 'high').length,
   } : null;
 
+  const initials = getInitials(user?.email ?? profile?.email);
+
   return (
     <>
       <Head>
@@ -237,86 +241,96 @@ export default function Page() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="min-h-screen bg-slate-50">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
-          <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-700 to-brand-900 flex items-center justify-center shadow-md">
-                <Shield className="w-5 h-5 text-white" />
+      <div className="min-h-screen bg-[#f0f2f5]">
+        {/* SAP-style Header */}
+        <header className="sticky top-0 z-40 bg-gradient-to-r from-[#354a5f] to-[#2c3e50] shadow-lg">
+          <div className="max-w-[1440px] mx-auto px-6 h-14 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center">
+                  <Shield className="w-4.5 h-4.5 text-white" />
+                </div>
+                <div className="hidden sm:block">
+                  <div className="text-sm font-bold text-white leading-tight tracking-tight">Claim Validation Portal</div>
+                  <div className="text-[10px] text-white/60 font-medium tracking-wide">MDF Analysis</div>
+                </div>
               </div>
-              <div>
-                <h1 className="text-base font-bold text-slate-900 leading-tight">Claim Validation Portal</h1>
-                <p className="text-xs text-slate-500">
-                  Partner Marketing Fund (MDF) Analysis
-                  <span className="hidden sm:inline"> · A project by <span className="font-semibold text-brand-700">Govind Amilkanthwar</span></span>
-                </p>
-              </div>
+              <div className="hidden md:block w-px h-7 bg-white/15" />
+              <span className="hidden md:inline-flex text-[11px] text-white/50 font-medium">
+                Project By — <span className="text-white/70 ml-1">Govind Amilkanthwar</span>
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="badge-info hidden md:inline-flex">
-                <Sparkles className="w-3 h-3" /> AI-Powered Analysis
-              </span>
               {(result || error) && (
-                <button onClick={reset} className="btn-secondary">
-                  <Plus className="w-4 h-4" /> New Claim
+                <button onClick={reset}
+                  className="h-8 px-3 text-xs font-medium text-white/90 bg-white/10 border border-white/20 rounded-md hover:bg-white/20 transition-all inline-flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> New
                 </button>
               )}
+              <button className="h-8 px-3 text-xs font-medium text-white/90 bg-white/10 border border-white/20 rounded-md hover:bg-white/20 transition-all hidden sm:inline-flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" /> Guidelines
+              </button>
               {profile?.role === 'admin' && (
-                <button onClick={() => router.push('/admin')} className="btn-secondary hidden sm:inline-flex">
-                  <Settings className="w-4 h-4" /> Admin
+                <button onClick={() => router.push('/admin')}
+                  className="h-8 px-3 text-xs font-medium text-white/90 bg-white/10 border border-white/20 rounded-md hover:bg-white/20 transition-all hidden sm:inline-flex items-center gap-1.5">
+                  <Settings className="w-3.5 h-3.5" /> Admin
                 </button>
               )}
               <button
-                onClick={async () => {
-                  logAction('logout');
-                  await signOut();
-                  router.replace('/login');
-                }}
-                className="btn-secondary"
+                onClick={async () => { logAction('logout'); await signOut(); router.replace('/login'); }}
+                className="h-8 px-3 text-xs font-medium text-white/90 bg-white/10 border border-white/20 rounded-md hover:bg-white/20 transition-all inline-flex items-center gap-1.5"
                 title="Sign out"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Sign Out</span>
               </button>
+              <div className="w-8 h-8 rounded-full bg-[#0070f2] flex items-center justify-center text-[11px] font-bold text-white ml-1 ring-2 ring-white/20">
+                {initials}
+              </div>
             </div>
           </div>
         </header>
 
-        <main className="max-w-[1600px] mx-auto px-6 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* LEFT: Form + Upload */}
-            <div className="lg:col-span-2 space-y-5">
+        <main className="max-w-[1440px] mx-auto px-6 py-6">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* LEFT: Form */}
+            <div className="w-full lg:w-[46%] space-y-4">
+              {/* Page title */}
+              <div className="mb-1">
+                <h2 className="text-xl font-bold text-[#1b2a3d] tracking-tight">Submit Claim for Validation</h2>
+                <p className="text-sm text-slate-500 mt-0.5">Enter claim details, upload supporting evidence, and get an AI-powered validation report.</p>
+              </div>
+
               {/* Partner Details */}
-              <section className="card">
-                <div className="card-header">
-                  <div className="icon-tile bg-gradient-to-br from-brand-500 to-brand-700">
-                    <Building2 className="w-5 h-5 text-white" />
+              <section className="sap-card">
+                <div className="sap-card-header">
+                  <div className="sap-icon bg-gradient-to-br from-[#0070f2] to-[#0054b6]">
+                    <Building2 className="w-4 h-4 text-white" />
                   </div>
-                  <h2 className="section-title">Partner Details</h2>
+                  <h3 className="sap-card-title">Partner Details</h3>
                 </div>
-                <div className="card-body space-y-4">
+                <div className="sap-card-body">
                   <div>
-                    <label className="label">Partner Name *</label>
-                    <input className={clsx('input-field', errs.partnerName && 'error')} placeholder="s-peers AG"
+                    <label className="sap-label">Partner Name *</label>
+                    <input className={clsx('sap-input', errs.partnerName && 'border-red-400 focus:ring-red-500')} placeholder="s-peers AG"
                       value={claim.partnerName} onChange={e => setField('partnerName', e.target.value)} />
-                    <p className="text-xs text-slate-500 mt-1">Partner ID will be extracted automatically from uploaded documents.</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Partner ID will be extracted automatically from uploaded documents.</p>
                   </div>
                 </div>
               </section>
 
               {/* Budget & Funding */}
-              <section className="card">
-                <div className="card-header">
-                  <div className="icon-tile bg-gradient-to-br from-emerald-500 to-emerald-700">
-                    <Euro className="w-5 h-5 text-white" />
+              <section className="sap-card">
+                <div className="sap-card-header">
+                  <div className="sap-icon bg-gradient-to-br from-emerald-500 to-emerald-700">
+                    <Euro className="w-4 h-4 text-white" />
                   </div>
-                  <h2 className="section-title">Budget & Funding</h2>
+                  <h3 className="sap-card-title">Budget & Funding</h3>
                 </div>
-                <div className="card-body">
+                <div className="sap-card-body">
                   <div>
-                    <label className="label">Funds Requested (€)</label>
-                    <input type="number" step="0.01" className="input-field"
+                    <label className="sap-label">Funds Requested (€)</label>
+                    <input type="number" step="0.01" className="sap-input"
                       placeholder="1614.77" value={claim.budgetAllocationAmount}
                       onChange={e => setField('budgetAllocationAmount', e.target.value)} />
                   </div>
@@ -324,107 +338,111 @@ export default function Page() {
               </section>
 
               {/* Request Details */}
-              <section className="card">
-                <div className="card-header">
-                  <div className="icon-tile bg-gradient-to-br from-violet-500 to-violet-700">
-                    <Hash className="w-5 h-5 text-white" />
+              <section className="sap-card">
+                <div className="sap-card-header">
+                  <div className="sap-icon bg-gradient-to-br from-violet-500 to-violet-700">
+                    <Hash className="w-4 h-4 text-white" />
                   </div>
-                  <h2 className="section-title">Request Details</h2>
+                  <h3 className="sap-card-title">Request Details</h3>
                 </div>
-                <div className="card-body grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="label">Request Number</label>
-                    <input className="input-field" placeholder="3UJNKL4QDMK"
-                      value={claim.requestNumber} onChange={e => setField('requestNumber', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="label">Activity Type</label>
-                    <select className="input-field"
-                      value={claim.activityType} onChange={e => setField('activityType', e.target.value)}>
-                      <option value="">Select type</option>
-                      {ACTIVITY_TYPES.map(a => <option key={a} value={a}>{a}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label">Activity</label>
-                    <select className="input-field" disabled={!claim.activityType}
-                      value={claim.activity} onChange={e => setField('activity', e.target.value)}>
-                      <option value="">{claim.activityType ? 'Select activity' : 'Pick activity type first'}</option>
-                      {activities.map(a => <option key={a} value={a}>{a}</option>)}
-                    </select>
+                <div className="sap-card-body">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="sap-label">Request Number</label>
+                      <input className="sap-input" placeholder="3UJNKL4QDMK"
+                        value={claim.requestNumber} onChange={e => setField('requestNumber', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="sap-label">Activity Type</label>
+                      <select className="sap-input"
+                        value={claim.activityType} onChange={e => setField('activityType', e.target.value)}>
+                        <option value="">Select type</option>
+                        {ACTIVITY_TYPES.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="sap-label">Activity</label>
+                      <select className="sap-input" disabled={!claim.activityType}
+                        value={claim.activity} onChange={e => setField('activity', e.target.value)}>
+                        <option value="">{claim.activityType ? 'Select activity' : 'Pick type first'}</option>
+                        {activities.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
               </section>
 
               {/* Dates */}
-              <section className="card">
-                <div className="card-header">
-                  <div className="icon-tile bg-gradient-to-br from-amber-500 to-orange-600">
-                    <Calendar className="w-5 h-5 text-white" />
+              <section className="sap-card">
+                <div className="sap-card-header">
+                  <div className="sap-icon bg-gradient-to-br from-amber-500 to-orange-600">
+                    <Calendar className="w-4 h-4 text-white" />
                   </div>
-                  <h2 className="section-title">Activity & Funding Dates</h2>
+                  <h3 className="sap-card-title">Activity & Funding Dates</h3>
                 </div>
-                <div className="card-body grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Fund Request Submitted</label>
-                    <input type="date" className="input-field"
-                      value={claim.fundRequestSubmittedDate} onChange={e => setField('fundRequestSubmittedDate', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="label">Activity Start Date</label>
-                    <input type="date" className="input-field"
-                      value={claim.activityStartDate} onChange={e => setField('activityStartDate', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="label">Activity End Date</label>
-                    <input type="date" className="input-field"
-                      value={claim.activityEndDate} onChange={e => setField('activityEndDate', e.target.value)} />
+                <div className="sap-card-body">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="sap-label">Fund Request Submitted</label>
+                      <input type="date" className="sap-input"
+                        value={claim.fundRequestSubmittedDate} onChange={e => setField('fundRequestSubmittedDate', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="sap-label">Activity Start Date</label>
+                      <input type="date" className="sap-input"
+                        value={claim.activityStartDate} onChange={e => setField('activityStartDate', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="sap-label">Activity End Date</label>
+                      <input type="date" className="sap-input"
+                        value={claim.activityEndDate} onChange={e => setField('activityEndDate', e.target.value)} />
+                    </div>
                   </div>
                 </div>
               </section>
 
               {/* Documents */}
-              <section className="card">
-                <div className="card-header justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="icon-tile bg-gradient-to-br from-rose-500 to-pink-700">
-                      <Layers className="w-5 h-5 text-white" />
+              <section className="sap-card">
+                <div className="sap-card-header justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="sap-icon bg-gradient-to-br from-rose-500 to-pink-700">
+                      <Layers className="w-4 h-4 text-white" />
                     </div>
-                    <h2 className="section-title">Supporting Documents</h2>
+                    <h3 className="sap-card-title">Supporting Documents</h3>
                   </div>
-                  <span className="badge-neutral">{docs.length} uploaded</span>
+                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{docs.length} uploaded</span>
                 </div>
-                <div className="card-body space-y-3">
+                <div className="sap-card-body space-y-3">
                   <div
                     onDragOver={e => { e.preventDefault(); setDrag(true); }}
                     onDragLeave={() => setDrag(false)}
                     onDrop={onDrop}
                     onClick={() => fileRef.current?.click()}
                     className={clsx(
-                      'relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all',
-                      drag ? 'border-brand-600 bg-brand-50' : 'border-slate-300 hover:border-brand-500 hover:bg-slate-50',
+                      'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all',
+                      drag ? 'border-[#0070f2] bg-blue-50/50' : 'border-slate-300 hover:border-[#0070f2]/50 hover:bg-slate-50',
                     )}
                   >
-                    <Upload className={clsx('w-8 h-8 mx-auto mb-2', drag ? 'text-brand-600' : 'text-slate-400')} />
+                    <Upload className={clsx('w-7 h-7 mx-auto mb-1.5', drag ? 'text-[#0070f2]' : 'text-slate-400')} />
                     <p className="text-sm font-medium text-slate-700">Drop files here or click to browse</p>
-                    <p className="text-xs text-slate-500 mt-1">PDF, Images, DOCX, XLSX, CSV, TXT — up to 25MB</p>
+                    <p className="text-xs text-slate-400 mt-0.5">PDF, Images, DOCX, XLSX, CSV, TXT</p>
                     <input ref={fileRef} type="file" multiple className="hidden"
                       accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.txt,.csv,.json"
                       onChange={e => e.target.files && addFiles(e.target.files)} />
                   </div>
 
                   {docs.length > 0 && (
-                    <ul className="space-y-2">
+                    <ul className="space-y-1.5">
                       {docs.map(d => (
-                        <li key={d.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 group">
+                        <li key={d.id} className="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-lg border border-slate-200 group">
                           {getFileIcon(d.name, d.type)}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-slate-800 truncate">{d.name}</p>
-                            <p className="text-xs text-slate-500">{formatSize(d.size)}</p>
+                            <p className="text-[11px] text-slate-500">{formatSize(d.size)}</p>
                           </div>
                           <button onClick={() => setDocs(docs.filter(x => x.id !== d.id))}
                             className="p-1 text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition">
-                            <X className="w-4 h-4" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </li>
                       ))}
@@ -441,16 +459,19 @@ export default function Page() {
                     <span>{error}</span>
                   </div>
                 )}
-                <button onClick={submit} disabled={busy} className="btn-primary w-full h-12 text-base">
+                <button onClick={submit} disabled={busy}
+                  className="w-full h-12 inline-flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-lg
+                    bg-gradient-to-r from-[#0070f2] to-[#0054b6] hover:from-[#0062d6] hover:to-[#004da6]
+                    shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                   {busy ? <><Loader2 className="w-5 h-5 animate-spin" /> Validating...</>
-                        : <><FileSearch className="w-5 h-5" /> Validate Claim <ArrowRight className="w-4 h-4" /></>}
+                        : <><Shield className="w-5 h-5" /> Validate Claim <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
             </div>
 
-            {/* RIGHT: Results */}
-            <div className="lg:col-span-3">
-              <div className="lg:sticky lg:top-[80px]">
+            {/* RIGHT: Info / Results */}
+            <div className="w-full lg:w-[54%]">
+              <div className="lg:sticky lg:top-[72px]">
                 {busy ? <LoadingPanel steps={STEPS} current={step} />
                   : result ? <ResultsPanel result={result} stats={stats!} tab={tab} setTab={setTab} onViewSummary={() => { setShowSummary(true); logAction('report_download', { decision: result.decision }); }} />
                   : <EmptyPanel />}
@@ -459,8 +480,8 @@ export default function Page() {
           </div>
         </main>
 
-        <footer className="max-w-[1600px] mx-auto px-6 py-6 text-center text-xs text-slate-500 space-y-1">
-          <p>A project by <span className="font-semibold text-slate-700">Govind Amilkanthwar</span></p>
+        <footer className="max-w-[1440px] mx-auto px-6 py-5 text-center text-xs text-slate-400 space-y-0.5">
+          <p>A project by <span className="font-semibold text-slate-500">Govind Amilkanthwar</span></p>
           <p>Results are analytical recommendations and require human review for final approval.</p>
         </footer>
 
@@ -476,26 +497,28 @@ export default function Page() {
 
 function EmptyPanel() {
   return (
-    <div className="card animate-fade-in overflow-hidden">
-      <div className="relative bg-gradient-to-br from-brand-700 via-brand-800 to-indigo-900 text-white px-8 py-10">
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(255,255,255,0.3), transparent 40%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.2), transparent 40%)',
+    <div className="sap-card animate-fade-in overflow-hidden">
+      {/* Hero */}
+      <div className="relative bg-gradient-to-br from-[#354a5f] via-[#2c3e50] to-[#1a2a3a] text-white px-7 py-9 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.07]" style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+          backgroundSize: '24px 24px',
         }} />
         <div className="relative flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 flex items-center justify-center flex-shrink-0">
             <Shield className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold tracking-tight">Claim Validation Portal</h3>
-            <p className="text-sm text-white/80 mt-1 max-w-xl">
+            <h3 className="text-xl font-bold tracking-tight">Claim Validation Portal</h3>
+            <p className="text-[13px] text-white/70 mt-1.5 max-w-lg leading-relaxed">
               An AI-powered analyst for partner marketing (MDF) claims. Enter your claim details, upload
               supporting evidence, and receive a structured validation report.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-white/10 border border-white/15">
                 <Sparkles className="w-3 h-3" /> AI-powered analysis
               </span>
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 border border-white/20">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-white/10 border border-white/15">
                 <FileCheck className="w-3 h-3" /> Guideline-aware
               </span>
             </div>
@@ -503,51 +526,56 @@ function EmptyPanel() {
         </div>
       </div>
 
-      <div className="card-body py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="p-5 rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white">
-            <h4 className="text-sm font-bold text-violet-900 mb-3 flex items-center gap-2">
-              <div className="icon-tile w-7 h-7 bg-gradient-to-br from-violet-500 to-violet-700">
-                <Upload className="w-4 h-4 text-white" />
+      {/* Content cards */}
+      <div className="p-6 space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* What to upload */}
+          <div className="p-4 rounded-lg border border-violet-200/80 bg-gradient-to-br from-violet-50/50 to-white">
+            <h4 className="text-[13px] font-bold text-violet-900 mb-2.5 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center flex-shrink-0">
+                <Upload className="w-3.5 h-3.5 text-white" />
               </div>
               What to upload
             </h4>
-            <ul className="text-xs text-slate-700 space-y-1.5 pl-1">
-              <li>• Invoices and receipts</li>
-              <li>• Event photos or screenshots</li>
-              <li>• Attendance lists or registrations</li>
-              <li>• Signed completion / delivery notes</li>
-              <li>• Contracts, quotes, purchase orders</li>
+            <ul className="text-xs text-slate-600 space-y-1.5 pl-0.5">
+              <li className="flex items-start gap-1.5"><span className="text-violet-400 mt-px">&#9679;</span> Invoices and receipts</li>
+              <li className="flex items-start gap-1.5"><span className="text-violet-400 mt-px">&#9679;</span> Event photos or screenshots</li>
+              <li className="flex items-start gap-1.5"><span className="text-violet-400 mt-px">&#9679;</span> Attendance lists or registrations</li>
+              <li className="flex items-start gap-1.5"><span className="text-violet-400 mt-px">&#9679;</span> Signed completion / delivery notes</li>
+              <li className="flex items-start gap-1.5"><span className="text-violet-400 mt-px">&#9679;</span> Contracts, quotes, purchase orders</li>
             </ul>
           </div>
-          <div className="p-5 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
-            <h4 className="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
-              <div className="icon-tile w-7 h-7 bg-gradient-to-br from-emerald-500 to-emerald-700">
-                <FileCheck className="w-4 h-4 text-white" />
+          {/* What gets checked */}
+          <div className="p-4 rounded-lg border border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 to-white">
+            <h4 className="text-[13px] font-bold text-emerald-900 mb-2.5 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0">
+                <FileCheck className="w-3.5 h-3.5 text-white" />
               </div>
               What gets checked
             </h4>
-            <ul className="text-xs text-slate-700 space-y-1.5 pl-1">
-              <li>• Monetary amounts reconciled vs. claim</li>
-              <li>• Dates align with activity window</li>
-              <li>• Forgery and document authenticity indicators</li>
-              <li>• Proof of performance present</li>
-              <li>• Program guideline compliance</li>
+            <ul className="text-xs text-slate-600 space-y-1.5 pl-0.5">
+              <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-px">&#9679;</span> Monetary amounts reconciled vs. claim</li>
+              <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-px">&#9679;</span> Dates align with activity window</li>
+              <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-px">&#9679;</span> Forgery and document authenticity indicators</li>
+              <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-px">&#9679;</span> Proof of performance present</li>
+              <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-px">&#9679;</span> Program guideline compliance</li>
             </ul>
           </div>
         </div>
 
+        {/* Three feature cards */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { Icon: FileSearch,    label: 'Evidence Extraction', tone: 'from-violet-500 to-indigo-600',  bg: 'from-violet-50 to-white',  border: 'border-violet-200' },
-            { Icon: BarChart3,     label: 'Field Validation',    tone: 'from-emerald-500 to-teal-600',   bg: 'from-emerald-50 to-white', border: 'border-emerald-200' },
-            { Icon: ClipboardList, label: 'Guideline Checks',    tone: 'from-amber-500 to-orange-600',   bg: 'from-amber-50 to-white',   border: 'border-amber-200' },
-          ].map(({ Icon, label, tone, bg, border }) => (
-            <div key={label} className={clsx('p-4 rounded-xl bg-gradient-to-br text-center border', bg, border)}>
-              <div className={clsx('icon-tile mx-auto mb-2 bg-gradient-to-br', tone)}>
-                <Icon className="w-5 h-5 text-white" />
+            { Icon: FileSearch,    label: 'Evidence Extraction', desc: 'AI extracts key data from documents with high accuracy.', tone: 'from-violet-500 to-indigo-600',  bg: 'from-violet-50/60 to-white',  border: 'border-violet-200/70' },
+            { Icon: BarChart3,     label: 'Field Validation',    desc: 'Cross-checks extracted data against claim entries and rules.', tone: 'from-emerald-500 to-teal-600',   bg: 'from-emerald-50/60 to-white', border: 'border-emerald-200/70' },
+            { Icon: ClipboardList, label: 'Guideline Checks',    desc: 'Evaluates claim against program guidelines and policies.', tone: 'from-amber-500 to-orange-600',   bg: 'from-amber-50/60 to-white',   border: 'border-amber-200/70' },
+          ].map(({ Icon, label, desc, tone, bg, border }) => (
+            <div key={label} className={clsx('p-4 rounded-lg bg-gradient-to-br text-center border', bg, border)}>
+              <div className={clsx('w-9 h-9 rounded-lg mx-auto mb-2 flex items-center justify-center bg-gradient-to-br shadow-sm', tone)}>
+                <Icon className="w-4.5 h-4.5 text-white" />
               </div>
-              <p className="text-xs font-semibold text-slate-800">{label}</p>
+              <p className="text-xs font-bold text-slate-800 mb-0.5">{label}</p>
+              <p className="text-[11px] text-slate-500 leading-snug">{desc}</p>
             </div>
           ))}
         </div>
@@ -558,26 +586,26 @@ function EmptyPanel() {
 
 function LoadingPanel({ steps, current }: { steps: string[]; current: number }) {
   return (
-    <div className="card animate-fade-in">
-      <div className="card-body py-12">
+    <div className="sap-card animate-fade-in">
+      <div className="px-6 py-12">
         <div className="flex flex-col items-center mb-8">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-brand-100 border-t-brand-600 animate-spin" />
-            <Sparkles className="w-6 h-6 text-brand-600 absolute inset-0 m-auto" />
+            <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-[#0070f2] animate-spin" />
+            <Sparkles className="w-6 h-6 text-[#0070f2] absolute inset-0 m-auto" />
           </div>
           <h3 className="mt-4 text-lg font-semibold text-slate-900">Analyzing Your Claim</h3>
-          <p className="text-sm text-slate-600 mt-1">This may take 30-60 seconds</p>
+          <p className="text-sm text-slate-500 mt-1">This may take 30-60 seconds</p>
         </div>
         <ol className="space-y-3 max-w-md mx-auto">
           {steps.map((s, i) => (
             <li key={s} className={clsx(
               'flex items-center gap-3 p-3 rounded-lg transition-all',
               i < current && 'bg-emerald-50',
-              i === current && 'bg-brand-50 ring-1 ring-brand-200',
+              i === current && 'bg-blue-50 ring-1 ring-blue-200',
               i > current && 'bg-slate-50 opacity-60',
             )}>
               {i < current ? <CheckCircle className="w-5 h-5 text-emerald-500" />
-                : i === current ? <Loader2 className="w-5 h-5 text-brand-600 animate-spin" />
+                : i === current ? <Loader2 className="w-5 h-5 text-[#0070f2] animate-spin" />
                 : <Clock className="w-5 h-5 text-slate-400" />}
               <span className={clsx('text-sm', i === current ? 'font-semibold text-slate-900' : 'text-slate-600')}>{s}</span>
             </li>
@@ -600,7 +628,6 @@ function ResultsPanel({ result, stats, tab, setTab, onViewSummary }: {
 
   return (
     <div className="space-y-4 animate-slide-up">
-      {/* Decision card */}
       <div className={clsx('rounded-xl border ring-1', d.bg, d.ring, 'p-6')}>
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 p-3 bg-white rounded-xl shadow-sm">
@@ -609,7 +636,7 @@ function ResultsPanel({ result, stats, tab, setTab, onViewSummary }: {
           <div className="flex-1">
             <div className="flex items-baseline gap-3 mb-1">
               <h2 className={clsx('text-2xl font-bold', d.text)}>{d.label}</h2>
-              <span className="text-sm text-slate-600">• Confidence {result.confidence}%</span>
+              <span className="text-sm text-slate-600">&bull; Confidence {result.confidence}%</span>
             </div>
             <p className={clsx('text-sm leading-relaxed', d.text)}>{result.summary}</p>
           </div>
@@ -617,14 +644,12 @@ function ResultsPanel({ result, stats, tab, setTab, onViewSummary }: {
             <FileDown className="w-4 h-4" /> View Summary
           </button>
         </div>
-        {/* Confidence bar */}
         <div className="mt-4 bg-white/70 rounded-full h-2 overflow-hidden">
           <div className="h-full bg-current rounded-full progress-bar"
             style={{ ['--progress-width' as string]: `${result.confidence}%`, width: `${result.confidence}%` } as React.CSSProperties} />
         </div>
       </div>
 
-      {/* Quick stats */}
       <div className="grid grid-cols-4 gap-3">
         <StatCard label="Checks Passed" value={stats.pass} total={stats.total} tone="emerald" />
         <StatCard label="Failed / Missing" value={stats.fail} total={stats.total} tone="red" />
@@ -632,9 +657,8 @@ function ResultsPanel({ result, stats, tab, setTab, onViewSummary }: {
         <StatCard label="Critical Issues" value={stats.criticalIssues} tone="orange" />
       </div>
 
-      {/* Tabs */}
-      <div className="card">
-        <div className="card-header overflow-x-auto">
+      <div className="sap-card">
+        <div className="px-5 py-3 border-b border-slate-100 overflow-x-auto bg-slate-50/50">
           <nav className="flex gap-1">
             {([
               ['overview', 'Overview', BarChart3],
@@ -650,7 +674,7 @@ function ResultsPanel({ result, stats, tab, setTab, onViewSummary }: {
             ))}
           </nav>
         </div>
-        <div className="card-body">
+        <div className="px-6 py-5">
           {tab === 'overview' && <OverviewTab result={result} />}
           {tab === 'fields' && <FieldsTab result={result} />}
           {tab === 'documents' && <DocumentsTab result={result} />}
@@ -659,8 +683,8 @@ function ResultsPanel({ result, stats, tab, setTab, onViewSummary }: {
         </div>
       </div>
 
-      <p className="text-xs text-slate-500 text-center">
-        Audited {new Date(result.auditTimestamp).toLocaleString()} • {result.processingNotes}
+      <p className="text-xs text-slate-400 text-center">
+        Audited {new Date(result.auditTimestamp).toLocaleString()} &bull; {result.processingNotes}
       </p>
     </div>
   );
@@ -690,12 +714,12 @@ function OverviewTab({ result }: { result: ValidationResult }) {
       {result.recommendations.length > 0 && (
         <div>
           <h4 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-brand-600" /> Recommendations
+            <Sparkles className="w-4 h-4 text-[#0070f2]" /> Recommendations
           </h4>
           <ul className="space-y-1.5">
             {result.recommendations.map((r, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                <ChevronRight className="w-4 h-4 text-brand-600 flex-shrink-0 mt-0.5" />
+                <ChevronRight className="w-4 h-4 text-[#0070f2] flex-shrink-0 mt-0.5" />
                 <span>{r}</span>
               </li>
             ))}
@@ -782,7 +806,7 @@ function DocumentsTab({ result }: { result: ValidationResult }) {
             <div className="mb-2">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Key Data Found</p>
               <ul className="text-xs text-slate-700 space-y-0.5">
-                {d.keyDataFound.map((k, j) => <li key={j}>• {k}</li>)}
+                {d.keyDataFound.map((k, j) => <li key={j}>&bull; {k}</li>)}
               </ul>
             </div>
           )}
@@ -790,7 +814,7 @@ function DocumentsTab({ result }: { result: ValidationResult }) {
             <div>
               <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Issues</p>
               <ul className="text-xs text-amber-800 space-y-0.5">
-                {d.issues.map((k, j) => <li key={j}>• {k}</li>)}
+                {d.issues.map((k, j) => <li key={j}>&bull; {k}</li>)}
               </ul>
             </div>
           )}
@@ -866,15 +890,13 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
 
   const printReport = (
     <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '12px', color: '#1e293b', lineHeight: 1.5, padding: '0' }}>
-      {/* Header */}
       <div style={{ textAlign: 'center', borderBottom: '2px solid #e2e8f0', paddingBottom: '16px', marginBottom: '20px' }}>
         <div style={{ fontSize: '22px', fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>Claim Validation Summary</div>
         <div style={{ fontSize: '11px', color: '#64748b' }}>
-          Generated {new Date(result.auditTimestamp).toLocaleString()} · Claim Validation Portal · A project by Govind Amilkanthwar
+          Generated {new Date(result.auditTimestamp).toLocaleString()} &middot; Claim Validation Portal &middot; A project by Govind Amilkanthwar
         </div>
       </div>
 
-      {/* Decision */}
       <div style={{ padding: '14px 16px', borderRadius: '8px', marginBottom: '20px', background: dc.bg, border: `1px solid ${dc.border}`, breakInside: 'avoid' as const }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
           <div style={{ fontSize: '16px', fontWeight: 700, color: dc.text }}>Decision: {d.label}</div>
@@ -883,7 +905,6 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
         <div style={{ fontSize: '12px', color: dc.text }}>{result.summary}</div>
       </div>
 
-      {/* AI Intelligence Answer */}
       {result.aiIntelligenceAnswer && (() => {
         const aia = result.aiIntelligenceAnswer;
         const rc = aia.recommendation === 'Approve'
@@ -907,7 +928,6 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
         );
       })()}
 
-      {/* Claim Details */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#475569', marginBottom: '8px' }}>Claim Details</div>
         <table style={{ width: '100%', borderCollapse: 'collapse' as const, border: '1px solid #e2e8f0' }}>
@@ -922,7 +942,6 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
         </table>
       </div>
 
-      {/* Field Validation */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#475569', marginBottom: '8px' }}>Field Validation</div>
         <table style={{ width: '100%', borderCollapse: 'collapse' as const, border: '1px solid #e2e8f0' }}>
@@ -950,7 +969,6 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
         </table>
       </div>
 
-      {/* Guideline Compliance */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#475569', marginBottom: '8px' }}>Guideline Compliance</div>
         <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px' }}>
@@ -970,7 +988,6 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
         </div>
       </div>
 
-      {/* Issues */}
       {result.issues.length > 0 && (
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#475569', marginBottom: '8px' }}>Issues Identified</div>
@@ -990,7 +1007,6 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
         </div>
       )}
 
-      {/* Recommendations */}
       {result.recommendations.length > 0 && (
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#475569', marginBottom: '8px' }}>Recommendations</div>
@@ -1002,19 +1018,16 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
         </div>
       )}
 
-      {/* Footer */}
       <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '12px', textAlign: 'center' as const, fontSize: '10px', color: '#94a3b8' }}>
-        Generated by Claim Validation Portal · A project by Govind Amilkanthwar
+        Generated by Claim Validation Portal &middot; A project by Govind Amilkanthwar
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Screen modal — hidden during print */}
       <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4 print:hidden">
         <div className="w-full max-w-4xl bg-white rounded-xl shadow-2xl my-8">
-          {/* Toolbar */}
           <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between rounded-t-xl">
             <h2 className="text-base font-bold text-slate-900">Claim Validation Summary</h2>
             <div className="flex items-center gap-2">
@@ -1023,12 +1036,11 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
             </div>
           </div>
 
-          {/* Screen content */}
           <div className="p-8 space-y-6">
             <div className="text-center border-b border-slate-200 pb-4">
               <h1 className="text-2xl font-bold text-slate-900">Claim Validation Summary</h1>
               <p className="text-xs text-slate-500 mt-1">
-                Generated {new Date(result.auditTimestamp).toLocaleString()} · Claim Validation Portal
+                Generated {new Date(result.auditTimestamp).toLocaleString()} &middot; Claim Validation Portal
               </p>
             </div>
 
@@ -1153,13 +1165,12 @@ function SummaryModal({ claim, result, onClose }: { claim: ClaimFormData; result
             )}
 
             <div className="border-t border-slate-200 pt-4 text-center text-xs text-slate-500">
-              Generated by Claim Validation Portal · A project by Govind Amilkanthwar
+              Generated by Claim Validation Portal &middot; A project by Govind Amilkanthwar
             </div>
           </div>
         </div>
       </div>
 
-      {/* Print-only portal — rendered outside #__next so it's the only thing visible when printing */}
       {mounted && createPortal(
         <div id="cvp-print-root">{printReport}</div>,
         document.body
